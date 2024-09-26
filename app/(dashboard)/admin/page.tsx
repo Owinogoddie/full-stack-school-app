@@ -1,9 +1,18 @@
 import Announcements from "@/components/announcements";
-import AttendanceChart from "@/components/charts/attendance-chart";
-import CountChart from "@/components/charts/count-chart";
 import EventCalendar from "@/components/calendars/event-calendar";
-import FinanceChart from "@/components/charts/finance-chart";
 import UserCard from "@/components/user-card";
+import dynamic from "next/dynamic";
+
+const AttendanceChart = dynamic(() => import('@/components/charts/attendance-chart'), {
+  loading: () => <AttendanceSkeleton />,
+});
+
+const FinanceChart = dynamic(() => import('@/components/charts/finance-chart'), {
+  loading: () => <FinanceSkeleton />,
+});
+const CountChart = dynamic(() => import('@/components/charts/count-chart'), {
+  loading: () => <CountSkeleton />,
+});
 
 const AdminPage = () => {
   return (
