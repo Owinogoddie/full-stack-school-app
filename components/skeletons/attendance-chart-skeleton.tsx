@@ -1,4 +1,4 @@
-const AttendanceSkeleton = () => {
+export const AttendanceSkeleton = () => {
     return (
       <div className="bg-white rounded-lg p-4 h-full animate-pulse">
         <div className="flex justify-between items-center mb-4">

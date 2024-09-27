@@ -1,5 +1,8 @@
 import Announcements from "@/components/announcements";
 import EventCalendar from "@/components/calendars/event-calendar";
+import { AttendanceSkeleton } from "@/components/skeletons/attendance-chart-skeleton";
+import { CountSkeleton } from "@/components/skeletons/count-chart-skeleton";
+import { FinanceSkeleton } from "@/components/skeletons/finance-chart-skeleton";
 import UserCard from "@/components/user-card";
 import dynamic from "next/dynamic";
 

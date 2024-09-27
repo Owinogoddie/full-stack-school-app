@@ -1,4 +1,4 @@
-const PerformanceSkeleton = () => {
+export const PerformanceSkeleton = () => {
     return (
       <div className="bg-white p-4 rounded-md h-80 relative animate-pulse">
         <div className="flex items-center justify-between mb-4">

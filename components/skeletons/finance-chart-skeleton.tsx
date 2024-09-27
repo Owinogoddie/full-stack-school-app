@@ -1,4 +1,4 @@
-const FinanceSkeleton = () => {
+export const FinanceSkeleton = () => {
     return (
       <div className="bg-white rounded-xl w-full h-full p-4 animate-pulse">
         <div className="flex justify-between items-center mb-4">
