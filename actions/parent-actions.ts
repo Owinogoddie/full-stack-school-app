@@ -19,12 +19,11 @@ export const createParent = async (
       publicMetadata: { role: "parent" },
     });
 
-    // Store the parent details in your Prisma database
+    // Store the parent details in your Prisma databasee
     await prisma.parent.create({
       data: {
         id: user.id,
         username: data.username,
-        password: data.password,
         name: data.name,
         surname: data.surname,
         email: data.email,
@@ -54,7 +53,6 @@ export const updateParent = async (
       where: { id: data.id },
       data: {
         username: data.username,
-        password: data.password,
         name: data.name,
         surname: data.surname,
         email: data.email,
