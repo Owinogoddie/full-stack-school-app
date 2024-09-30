@@ -60,7 +60,14 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         const studentClasses = await prisma.class.findMany({
           include: { _count: { select: { students: true } } },
         });
-        relatedData = { classes: studentClasses, grades: studentGrades };
+        const StudentParents = await prisma.parent.findMany({
+          select: {
+            id: true,
+            name: true,
+            surname: true,
+          },
+        });
+        relatedData = { classes: studentClasses, grades: studentGrades,parents:StudentParents };
         break;
       case "parent":
         const parentStudents = await prisma.student.findMany({

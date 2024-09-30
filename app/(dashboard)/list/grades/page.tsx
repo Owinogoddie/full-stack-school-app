@@ -4,11 +4,11 @@ import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Grade, Prisma } from "@prisma/client";
+import { Grade, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 
-type GradeList = Grade;
+type GradeList = Grade &{students:Student[]};
 
 const GradeListPage = async ({
   searchParams,
