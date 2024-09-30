@@ -19,6 +19,7 @@ import { deleteResult } from "@/actions/result-actions";
 import { deleteAttendance } from "@/actions/attendance-actions";
 import { deleteEvent } from "@/actions/event-actions";
 import { deleteAnnouncement } from "@/actions/announcement-actions";
+import { deleteGrade } from "@/actions/grade-actions";
 
 const deleteActionMap = {
   subject: deleteSubject,
@@ -33,6 +34,7 @@ const deleteActionMap = {
   attendance: deleteAttendance,
   event: deleteEvent,
   announcement: deleteAnnouncement,
+  grade: deleteGrade,
 };
 
 // USE LAZY LOADING
@@ -53,6 +55,9 @@ const SubjectForm = dynamic(() => import("./forms/subject-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const ClassForm = dynamic(() => import("./forms/class-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const GradeForm = dynamic(() => import("./forms/grade-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const LessonForm = dynamic(() => import("./forms/lesson-form"), {
@@ -100,6 +105,9 @@ const forms: {
       setOpen={setOpen}
       relatedData={relatedData}
     />
+  ),
+  grade: (setOpen, type, data) => (
+    <GradeForm type={type} data={data} setOpen={setOpen} />
   ),
   teacher: (setOpen, type, data, relatedData) => (
     <TeacherForm
