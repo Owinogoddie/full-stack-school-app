@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 import { CldUploadWidget } from "next-cloudinary";
 import { StudentSchema, studentSchema } from "@/schemas/student-schema";
 import { createStudent, updateStudent } from "@/actions/student-actions";
+import SelectField from '../select-field'
 
 const StudentForm = ({
   type,
@@ -28,6 +29,7 @@ const StudentForm = ({
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<StudentSchema>({
     resolver: zodResolver(studentSchema),
@@ -170,89 +172,60 @@ const StudentForm = ({
             hidden
           />
         )}
-        {/* Parent Dropdown */}
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Parent</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("parentId")}
-            defaultValue={data?.parentId}
-          >
-            {parents.map((parent: { id: string; name: string; surname: string }) => (
-              <option value={parent.id} key={parent.id}>
-                {parent.name} {parent.surname}
-              </option>
-            ))}
-          </select>
-          {errors.parentId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.parentId.message.toString()}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Sex</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("sex")}
-            defaultValue={data?.sex}
-          >
-            <option value="MALE">Male</option>
-            <option value="FEMALE">Female</option>
-          </select>
-          {errors.sex?.message && (
-            <p className="text-xs text-red-400">
-              {errors.sex.message.toString()}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Grade</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("gradeId")}
-            defaultValue={data?.gradeId}
-          >
-            {grades.map((grade: { id: number; level: number }) => (
-              <option value={grade.id} key={grade.id}>
-                {grade.level}
-              </option>
-            ))}
-          </select>
-          {errors.gradeId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.gradeId.message.toString()}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Class</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("classId")}
-            defaultValue={data?.classId}
-          >
-            {classes.map(
-              (classItem: {
-                id: number;
-                name: string;
-                capacity: number;
-                _count: { students: number };
-              }) => (
-                <option value={classItem.id} key={classItem.id}>
-                  ({classItem.name} -{" "}
-                  {classItem._count.students + "/" + classItem.capacity}{" "}
-                  Capacity)
-                </option>
-              )
-            )}
-          </select>
-          {errors.classId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.classId.message.toString()}
-            </p>
-          )}
-        </div>
+   
+
+   <SelectField
+        label="Parent"
+        options={parents.map((parent:any) => ({
+          value: parent.id,
+          label: `${parent.name} ${parent.surname}`,
+        }))}
+        name="parentId"
+        register={register}
+        setValue={setValue}
+        error={errors.parentId}
+        defaultValue={data?.parentId}
+      />
+
+      <SelectField
+        label="Sex"
+        options={[
+          { value: 'MALE', label: 'Male' },
+          { value: 'FEMALE', label: 'Female' },
+        ]}
+        name="sex"
+        register={register}
+        setValue={setValue}
+        error={errors.sex}
+        defaultValue={data?.sex}
+      />
+
+      <SelectField
+        label="Grade"
+        options={grades.map((grade:any) => ({
+          value: grade.id,
+          label: grade.level.toString(),
+        }))}
+        name="gradeId"
+        register={register}
+        setValue={setValue}
+        error={errors.gradeId}
+        defaultValue={data?.gradeId}
+      />
+
+      <SelectField
+        label="Class"
+        options={classes.map((classItem:any) => ({
+          value: classItem.id,
+          label: `${classItem.name} - ${classItem._count.students}/${classItem.capacity} Capacity`,
+        }))}
+        name="classId"
+        register={register}
+        setValue={setValue}
+        error={errors.classId}
+        defaultValue={data?.classId}
+      />
+
       </div>
       {state.error && (
         <span className="text-red-500">Something went wrong!</span>
