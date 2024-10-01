@@ -15,6 +15,7 @@ import {
 } from "@/schemas/teacher-schema";
 import MultiSelect from "../multi-select";
 import { createTeacher, updateTeacher } from "@/actions/teacher-actions";
+import SelectField from "../select-field";
 
 // Type for the response state
 type ResponseState = {
@@ -42,13 +43,14 @@ const TeacherForm = ({
   const {
     register,
     handleSubmit,
+    setValue,
     control,
     formState: { errors, isSubmitting },
   } = useForm<TeacherSchema>({
     resolver: zodResolver(schema),
     defaultValues: data,
   });
-// console.log(relatedData)
+  // console.log(relatedData)
   const [img, setImg] = useState<any>(data?.img);
   const [state, setState] = useState<ResponseState>({
     success: false,
@@ -196,51 +198,42 @@ const TeacherForm = ({
           />
         )}
 
-        <div className="flex flex-col gap-2 w-full md:w-1/2">
-          <label className="text-xs text-gray-500">Sex</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("sex")}
-            defaultValue={data?.sex}
-          >
-            <option value="MALE">Male</option>
-            <option value="FEMALE">Female</option>
-          </select>
-          {errors.sex?.message && (
-            <p className="text-xs text-red-400">
-              {errors.sex.message.toString()}
-            </p>
-          )}
-        </div>
-        {data && (
-          <div>
-            <h4>Old Subjects</h4>
-            <ul>
-              {data?.subjects?.map((subject:any) => (
-                <li key={subject.id}>{subject.name}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+<SelectField
+          label="Sex"
+          options={[
+            { value: "MALE", label: "Male" },
+            { value: "FEMALE", label: "Female" },
+          ]}
+          name="sex"
+          register={register}
+          setValue={setValue}
+          error={errors.sex}
+          defaultValue={data?.sex}
+        />
         {/* MultiSelect Component for Subjects */}
         <Controller
-  name="subjects"
-  control={control}
-  defaultValue={relatedData?.subjects?.map((subject:any) => subject.id.toString()) || []}
-  render={({ field }) => (
-    <MultiSelect
-      label="Subjects"
-      options={subjects.map((subject:any) => ({
-        id: subject.id,
-        label: subject.name,
-      }))}
-      value={field.value}
-      onChange={field.onChange}
-      error={errors.subjects}
-      defaultValue={relatedData?.subjects?.map((subject:any) => subject.id.toString()) || []}
-    />
-  )}
-/>
+          name="subjects"
+          control={control}
+          defaultValue={
+            data?.subjects?.map((subject: any) => subject.id.toString()) || []
+          }
+          render={({ field }) => (
+            <MultiSelect
+              label="Subjects"
+              options={subjects.map((subject: any) => ({
+                id: subject.id,
+                label: subject.name,
+              }))}
+              value={field.value}
+              onChange={field.onChange}
+              error={errors.subjects}
+              defaultValue={
+                data?.subjects?.map((subject: any) => subject.id.toString()) ||
+                []
+              }
+            />
+          )}
+        />
 
         {/* Image Upload Section */}
         <div className="flex flex-col gap-2 w-full md:w-1/2">

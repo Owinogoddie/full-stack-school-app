@@ -24,6 +24,7 @@ const SingleTeacherPage = async ({
     | null = await prisma.teacher.findUnique({
     where: { id },
     include: {
+      subjects:true,
       _count: {
         select: {
           subjects: true,
