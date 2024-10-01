@@ -12,11 +12,11 @@ type ResponseState = {
   messages?: string[];
 };
 
-export const createTeacher = async (
-  prevState: ResponseState,
-  formData: TeacherSchema
-): Promise<ResponseState> => {
+export const createTeacher = async (formData: TeacherSchema): Promise<ResponseState> => {
   let user;
+  if (!formData.password) {
+    return { success: false, error: true, message: "Password is required for update." };
+  }
   try {
     // Create user in Clerk
     user = await clerkClient.users.createUser({
@@ -76,16 +76,14 @@ export const createTeacher = async (
   }
 };
 
-export const updateTeacher = async (
-  prevState: ResponseState,
-  formData: TeacherSchema
-): Promise<ResponseState> => {
+export const updateTeacher = async (formData: any): Promise<ResponseState> => {
   if (!formData.id) {
     return { success: false, error: true, message: "Teacher ID is required for update." };
   }
   
   let originalTeacher;
   try {
+    console.log('updating')
     // Fetch original teacher data for potential rollback
     originalTeacher = await prisma.teacher.findUnique({
       where: { id: formData.id },

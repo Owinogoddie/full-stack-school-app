@@ -5,14 +5,18 @@ import { Controller, useForm } from "react-hook-form";
 import InputField from "../input-field";
 import Image from "next/image";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { CldUploadWidget } from "next-cloudinary";
-import { TeacherSchema, teacherSchema } from "@/schemas/teacher-schema";
-import { createTeacher, updateTeacher } from "@/actions/teacher-actions";
+import {
+  TeacherSchema,
+  teacherSchema,
+  teacherUpdateSchema,
+} from "@/schemas/teacher-schema";
 import MultiSelect from "../multi-select";
+import { createTeacher, updateTeacher } from "@/actions/teacher-actions";
 
+// Type for the response state
 type ResponseState = {
   success: boolean;
   error: boolean;
@@ -31,36 +35,53 @@ const TeacherForm = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
+  // Conditional type for form data schema
+  const schema = type === "create" ? teacherSchema : teacherUpdateSchema;
+
+  // Set up form handling with react-hook-form
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<TeacherSchema>({
-    resolver: zodResolver(teacherSchema),
+    resolver: zodResolver(schema),
     defaultValues: data,
   });
-
+// console.log(relatedData)
   const [img, setImg] = useState<any>(data?.img);
-
-  const [state, formAction] = useFormState<ResponseState, TeacherSchema>(
-    type === "create" ? createTeacher : updateTeacher,
-    {
-      success: false,
-      error: false,
-    }
-  );
-
-  const onSubmit = handleSubmit((formData) => {
-    formAction({ 
-      ...formData, 
-      img: img?.secure_url || img 
-    });
+  const [state, setState] = useState<ResponseState>({
+    success: false,
+    error: false,
   });
-  
+
+  // Submit handler for the form
+  const onSubmit = handleSubmit(async (formData) => {
+    console.log("Submitting form:", formData);
+    let responseState: ResponseState;
+
+    if (type === "create") {
+      responseState = await createTeacher({
+        ...formData,
+        img: img?.secure_url || img,
+      });
+    } else {
+      console.log("Updating teacher", formData);
+      responseState = await updateTeacher({
+        ...formData,
+        img: img?.secure_url || img,
+      });
+    }
+
+    console.log("Response state:", responseState);
+    setState(responseState);
+  });
+
   const router = useRouter();
 
+  // Handle side effects after form submission
   useEffect(() => {
+    console.log(type);
     if (state.success) {
       toast.success(
         `Teacher has been ${type === "create" ? "created" : "updated"}!`
@@ -76,6 +97,7 @@ const TeacherForm = ({
     }
   }, [state, router, type, setOpen]);
 
+  // Destructure related data like subjects
   const { subjects } = relatedData;
 
   return (
@@ -83,6 +105,8 @@ const TeacherForm = ({
       <h1 className="text-xl font-semibold">
         {type === "create" ? "Create a new teacher" : "Update the teacher"}
       </h1>
+
+      {/* Authentication Information */}
       <span className="text-xs text-gray-400 font-medium">
         Authentication Information
       </span>
@@ -101,15 +125,18 @@ const TeacherForm = ({
           register={register}
           error={errors?.email}
         />
-        <InputField
-          label="Password"
-          name="password"
-          type="password"
-          defaultValue={data?.password}
-          register={register}
-          error={errors?.password}
-        />
+        {type === "create" && (
+          <InputField
+            label="Password"
+            name="password"
+            type="password"
+            register={register}
+            error={errors.password}
+          />
+        )}
       </div>
+
+      {/* Personal Information */}
       <span className="text-xs text-gray-400 font-medium">
         Personal Information
       </span>
@@ -157,6 +184,7 @@ const TeacherForm = ({
           error={errors.birthday}
           type="date"
         />
+
         {data && (
           <InputField
             label="Id"
@@ -167,6 +195,7 @@ const TeacherForm = ({
             hidden
           />
         )}
+
         <div className="flex flex-col gap-2 w-full md:w-1/2">
           <label className="text-xs text-gray-500">Sex</label>
           <select
@@ -183,37 +212,37 @@ const TeacherForm = ({
             </p>
           )}
         </div>
-        {/* <MultiSelect
-          label="Subjects"
-          options={subjects.map((subject: any) => ({
-            id: subject.id,
-            label: subject.name,
-          }))}
-          name="subjects"
-          register={register}
-          error={
-            Array.isArray(errors.subjects)
-              ? errors.subjects[0]
-              : errors.subjects
-          } // Safely handle the error
-          defaultValue={data?.subjects?.map((subject: any) => subject.id) || []}
-        /> */}
-        <Controller
-        name="subjects"
-        control={control}
-        render={({ field }) => (
-          <MultiSelect
-            label="Subjects"
-            options={subjects.map((subject: any) => ({
-              id: subject.id,
-              label: subject.name,
-            }))}
-            error={errors.subjects}
-            {...field}
-          />
+        {data && (
+          <div>
+            <h4>Old Subjects</h4>
+            <ul>
+              {data?.subjects?.map((subject:any) => (
+                <li key={subject.id}>{subject.name}</li>
+              ))}
+            </ul>
+          </div>
         )}
-      />
+        {/* MultiSelect Component for Subjects */}
+        <Controller
+  name="subjects"
+  control={control}
+  defaultValue={relatedData?.subjects?.map((subject:any) => subject.id.toString()) || []}
+  render={({ field }) => (
+    <MultiSelect
+      label="Subjects"
+      options={subjects.map((subject:any) => ({
+        id: subject.id,
+        label: subject.name,
+      }))}
+      value={field.value}
+      onChange={field.onChange}
+      error={errors.subjects}
+      defaultValue={relatedData?.subjects?.map((subject:any) => subject.id.toString()) || []}
+    />
+  )}
+/>
 
+        {/* Image Upload Section */}
         <div className="flex flex-col gap-2 w-full md:w-1/2">
           <label className="text-xs text-gray-500">Photo</label>
           <CldUploadWidget
@@ -246,21 +275,47 @@ const TeacherForm = ({
           )}
         </div>
       </div>
+
+      {/* Error Display */}
       {state.error && (
-        <div className="text-red-500">
+        <div className="mt-4 p-4 border border-red-300 rounded-md bg-red-50">
+          <h2 className="text-red-600 font-semibold">Error:</h2>
           {state.messages ? (
-            <ul>
+            <ul className="list-disc list-inside text-red-500">
               {state.messages.map((message, index) => (
-                <li key={index}>{message}</li>
+                <li key={index} className="text-sm">
+                  {message}
+                </li>
               ))}
             </ul>
           ) : (
-            <span>{state.message || "Something went wrong!"}</span>
+            <span className="text-sm">
+              {state.message || "Something went wrong!"}
+            </span>
           )}
         </div>
       )}
-      <button className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+
+      {/* Submit Button */}
+      <button
+        type="submit"
+        className="bg-blue-400 text-white p-2 rounded-md relative"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? (
+          <>
+            <span className="opacity-0">
+              {type === "create" ? "Create" : "Update"}
+            </span>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-5 h-5 border-t-2 border-white border-solid rounded-full animate-spin"></div>
+            </div>
+          </>
+        ) : type === "create" ? (
+          "Create"
+        ) : (
+          "Update"
+        )}
       </button>
     </form>
   );

@@ -1,62 +1,98 @@
-"use server"
-
-type CurrentState = { success: boolean; error: boolean };
+'use server'
 import prisma from "@/lib/prisma";
 import { ClassSchema } from "@/schemas/class-schema";
 
-export const createClass = async (
-    currentState: CurrentState,
-    data: ClassSchema
-  ) => {
-    try {
-      await prisma.class.create({
-        data,
-      });
-  
-      // revalidatePath("/list/class");
-      return { success: true, error: false };
-    } catch (err) {
-      console.log(err);
-      return { success: false, error: true };
+type ResponseState = {
+  success: boolean;
+  error: boolean;
+  message?: string;
+  messages?: string[];
+};
+
+export const createClass = async (formData: ClassSchema): Promise<ResponseState> => {
+  try {
+    const { ...dataToCreate } = formData; // Exclude `id`
+    await prisma.class.create({
+      data: dataToCreate,
+    });
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Error in createClass: ", err);
+
+    // Prisma error handling without instanceof check
+    if (err?.code === "P2002") {
+      const targetField = err.meta?.target;
+      return { success: false, error: true, message: `The ${targetField} is already in use. Please try another.` };
     }
-  };
-  
-  export const updateClass = async (
-    currentState: CurrentState,
-    data: ClassSchema
-  ) => {
-    try {
-      await prisma.class.update({
-        where: {
-          id: data.id,
-        },
-        data,
-      });
-  
-      // revalidatePath("/list/class");
-      return { success: true, error: false };
-    } catch (err) {
-      console.log(err);
-      return { success: false, error: true };
+
+    return { success: false, error: true, message: err.message || "An error occurred during class creation." };
+  }
+};
+
+export const updateClass = async (formData: ClassSchema): Promise<ResponseState> => {
+  if (!formData.id) {
+    return { success: false, error: true, message: "Class ID is required for update." };
+  }
+
+  let originalClass;
+  try {
+    originalClass = await prisma.class.findUnique({
+      where: { id: formData.id },
+    });
+
+    if (!originalClass) {
+      return { success: false, error: true, message: "Class not found." };
     }
-  };
-  
-  export const deleteClass = async (
-    currentState: CurrentState,
-    data: FormData
-  ) => {
-    const id = data.get("id") as string;
-    try {
-      await prisma.class.delete({
-        where: {
-          id: parseInt(id),
-        },
-      });
-  
-      // revalidatePath("/list/class");
-      return { success: true, error: false };
-    } catch (err) {
-      console.log(err);
-      return { success: false, error: true };
+
+    await prisma.class.update({
+      where: { id: formData.id },
+      data: formData,
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Error in updateClass: ", err);
+
+    // Rollback on error
+    if (originalClass) {
+      try {
+        await prisma.class.update({
+          where: { id: formData.id },
+          data: originalClass,
+        });
+      } catch (rollbackErr) {
+        console.error("Error during rollback: ", rollbackErr);
+      }
     }
-  };
+
+    if (err?.code === "P2002") {
+      const targetField = err.meta?.target;
+      return { success: false, error: true, message: `The ${targetField} is already in use. Please try another.` };
+    }
+
+    return { success: false, error: true, message: err.message || "An error occurred during class update." };
+  }
+};
+
+export const deleteClass = async (currentState: ResponseState, formData: FormData): Promise<ResponseState> => {
+  const id = formData.get("id") as string;
+  if (!id) {
+    return { success: false, error: true, message: "Class ID is required for deletion." };
+  }
+
+  try {
+    await prisma.class.delete({
+      where: { id: parseInt(id) },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Error in deleteClass: ", err);
+
+    if (err?.code === "P2025") {
+      return { success: false, error: true, message: "Class not found." };
+    }
+
+    return { success: false, error: true, message: err.message || "An error occurred during class deletion." };
+  }
+};

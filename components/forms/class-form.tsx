@@ -3,12 +3,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import InputField from "../input-field";
-import { useFormState } from "react-dom";
-import { Dispatch, SetStateAction, useEffect } from "react";
-import { toast } from "react-toastify";
+import { useState, Dispatch, SetStateAction, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { ClassSchema, classSchema } from "@/schemas/class-schema";
 import { createClass, updateClass } from "@/actions/class-actions";
+
+type ResponseState = {
+  success: boolean;
+  error: boolean;
+  message?: string;
+};
 
 const ClassForm = ({
   type,
@@ -29,28 +34,32 @@ const ClassForm = ({
     resolver: zodResolver(classSchema),
   });
 
-  // AFTER REACT 19 IT'LL BE USEACTIONSTATE
+  const [state, setState] = useState<ResponseState>({
+    success: false,
+    error: false,
+  });
 
-  const [state, formAction] = useFormState(
-    type === "create" ? createClass : updateClass,
-    {
-      success: false,
-      error: false,
+  const onSubmit = handleSubmit(async (formData) => {
+    let responseState: ResponseState;
+
+    if (type === "create") {
+      responseState = await createClass(formData);
+    } else {
+      responseState = await updateClass(formData);
     }
-  );
 
-  const onSubmit = handleSubmit((data) => {
-    console.log(data);
-    formAction(data);
+    setState(responseState);
   });
 
   const router = useRouter();
 
   useEffect(() => {
     if (state.success) {
-      toast(`Subject has been ${type === "create" ? "created" : "updated"}!`);
+      toast.success(`Class has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
+    } else if (state.error && state.message) {
+      toast.error(state.message);
     }
   }, [state, router, type, setOpen]);
 

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useFormState } from "react-dom";
-import { toast } from "react-toastify";
+import toast from 'react-hot-toast';
 import { FormContainerProps } from "./form-container";
 import { deleteSubject } from "@/actions/subject-actions";
 import { deleteClass } from "@/actions/class-actions";
@@ -188,7 +188,7 @@ const FormModal = ({
 
     useEffect(() => {
       if (state.success) {
-        toast(`${table} has been deleted!`);
+        toast.success(`${table} has been deleted!`);
         setOpen(false);
         router.refresh();
       }

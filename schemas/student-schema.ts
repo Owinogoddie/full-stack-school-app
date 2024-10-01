@@ -29,5 +29,9 @@ export const studentSchema = z.object({
     parentId: z.string().min(1, { message: "Parent Id is required!" }),
   });
   
-  export type StudentSchema = z.infer<typeof studentSchema>;
-  
+ // Partial Student Schema for updates
+export const updateStudentSchema = studentSchema.partial();
+
+// Export the inferred types
+export type StudentSchema = z.infer<typeof studentSchema>;
+export type UpdateStudentSchema = z.infer<typeof updateStudentSchema>;

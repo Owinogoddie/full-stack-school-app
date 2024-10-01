@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// Full Parent Schema for creation
 export const parentSchema = z.object({
   id: z.string().optional(),
   username: z.string().min(3, "Username must be at least 3 characters long!"),
@@ -14,7 +15,13 @@ export const parentSchema = z.object({
     .optional()
     .or(z.literal("")),
   img: z.string().optional(),
-  students: z.array(z.string()).optional(), // Array of student ids
+  students: z.array(z.string()).optional()
+});
+
+// Partial Parent Schema for updates, requiring `id`
+export const parentUpdateSchema = parentSchema.partial().extend({
+  id: z.string(),
 });
 
 export type ParentSchema = z.infer<typeof parentSchema>;
+export type ParentUpdateSchema = z.infer<typeof parentUpdateSchema>;

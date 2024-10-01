@@ -12,18 +12,31 @@ interface MultiSelectProps {
   value?: string[];
   onChange: (value: string[]) => void;
   error?: { message?: string };
+  defaultValue?: string[];
 }
 
 const MultiSelect: React.FC<MultiSelectProps> = ({
   label,
   options,
-  value = [], // Provide a default empty array
+  value = [],
   onChange,
   error,
+  defaultValue = [],
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Option[]>(() => {
+    // Initialize with defaultValue
+    return options.filter((option) => defaultValue.includes(option.id.toString()));
+  }); 
+   const wrapperRef = useRef<HTMLDivElement>(null);
+   useEffect(() => {
+    // Update selectedOptions when value prop changes
+    const newSelectedOptions = options.filter((option) => 
+      value.includes(option.id.toString())
+    );
+    setSelectedOptions(newSelectedOptions);
+  }, [value, options]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -48,9 +61,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     onChange(newValue);
   };
 
-  const selectedOptions = options.filter((option) => 
-    value.includes(option.id.toString())
-  );
+  // const selectedOptions = options.filter((option) => 
+  //   value.includes(option.id.toString())
+  // );
 
   return (
     <div className="relative w-full" ref={wrapperRef}>
@@ -63,7 +76,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
           className="relative py-3 px-4 w-full text-left cursor-pointer bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           onClick={() => setIsOpen(!isOpen)}
         >
-          {selectedOptions.length
+          {selectedOptions.length > 0
             ? selectedOptions.map((option) => option.label).join(", ")
             : "Select multiple options..."}
           <div className="absolute top-1/2 right-3 -translate-y-1/2">
