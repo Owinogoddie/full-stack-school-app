@@ -9,35 +9,23 @@ interface Option {
 interface MultiSelectProps {
   label: string;
   options: Option[];
-  value?: string[];
+  value: string[];
   onChange: (value: string[]) => void;
   error?: { message?: string };
-  defaultValue?: string[];
 }
 
 const MultiSelect: React.FC<MultiSelectProps> = ({
   label,
   options,
-  value = [],
+  value,
   onChange,
   error,
-  defaultValue = [],
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedOptions, setSelectedOptions] = useState<Option[]>(() => {
-    // Initialize with defaultValue
-    return options.filter((option) => defaultValue.includes(option.id.toString()));
-  }); 
-   const wrapperRef = useRef<HTMLDivElement>(null);
-   useEffect(() => {
-    // Update selectedOptions when value prop changes
-    const newSelectedOptions = options.filter((option) => 
-      value.includes(option.id.toString())
-    );
-    setSelectedOptions(newSelectedOptions);
-  }, [value, options]);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
+  
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -61,9 +49,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     onChange(newValue);
   };
 
-  // const selectedOptions = options.filter((option) => 
-  //   value.includes(option.id.toString())
-  // );
+  const selectedOptions = options.filter((option) => 
+    value.includes(option.id.toString())
+  );
 
   return (
     <div className="relative w-full" ref={wrapperRef}>

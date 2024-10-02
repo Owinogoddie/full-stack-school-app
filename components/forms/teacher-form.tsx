@@ -40,6 +40,8 @@ const TeacherForm = ({
   const schema = type === "create" ? teacherSchema : teacherUpdateSchema;
 
   // Set up form handling with react-hook-form
+  console.log(relatedData.subjects);
+  console.log(data.subjects);
   const {
     register,
     handleSubmit,
@@ -48,7 +50,13 @@ const TeacherForm = ({
     formState: { errors, isSubmitting },
   } = useForm<TeacherSchema>({
     resolver: zodResolver(schema),
-    defaultValues: data,
+    defaultValues: {
+      ...data,
+      subjects:
+        data?.subjects?.map((subject: any) => subject.id.toString()) ||
+        relatedData?.subjects?.map((subject: any) => subject.id.toString()) ||
+        [],
+    },
   });
   // console.log(relatedData)
   const [img, setImg] = useState<any>(data?.img);
@@ -198,7 +206,7 @@ const TeacherForm = ({
           />
         )}
 
-<SelectField
+        <SelectField
           label="Sex"
           options={[
             { value: "MALE", label: "Male" },
@@ -212,28 +220,28 @@ const TeacherForm = ({
         />
         {/* MultiSelect Component for Subjects */}
         <Controller
-          name="subjects"
-          control={control}
-          defaultValue={
-            data?.subjects?.map((subject: any) => subject.id.toString()) || []
-          }
-          render={({ field }) => (
-            <MultiSelect
-              label="Subjects"
-              options={subjects.map((subject: any) => ({
-                id: subject.id,
-                label: subject.name,
-              }))}
-              value={field.value}
-              onChange={field.onChange}
-              error={errors.subjects}
-              defaultValue={
-                data?.subjects?.map((subject: any) => subject.id.toString()) ||
-                []
-              }
-            />
-          )}
-        />
+  name="subjects"
+  control={control}
+  render={({ field }) => {
+    console.log("field.value:", field.value); // Debug log
+
+    return (
+      <MultiSelect
+        label="Subjects"
+        options={subjects.map((subject: any) => ({
+          id: subject.id.toString(),
+          label: subject.name,
+        }))}
+        value={field.value || []}
+        onChange={(newValue) => {
+          console.log("New value:", newValue); // Debug log
+          field.onChange(newValue);
+        }}
+        error={errors.subjects}
+      />
+    );
+  }}
+/>
 
         {/* Image Upload Section */}
         <div className="flex flex-col gap-2 w-full md:w-1/2">
