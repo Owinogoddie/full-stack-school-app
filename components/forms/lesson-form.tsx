@@ -27,7 +27,11 @@ const LessonForm = ({
     formState: { errors },
   } = useForm<LessonSchema>({
     resolver: zodResolver(lessonSchema),
-    defaultValues: data,
+    defaultValues: {
+      ...data,
+      startTime: data?.startTime?.toISOString().split("T")[1].slice(0, 5) || "", 
+      endTime: data?.endTime?.toISOString().split("T")[1].slice(0, 5) || "", 
+    },
   });
 
   const [state, formAction] = useFormState(

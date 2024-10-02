@@ -52,6 +52,7 @@ const TeacherForm = ({
     resolver: zodResolver(schema),
     defaultValues: {
       ...data,
+      birthday: data?.birthday?.toISOString().split("T")[0],
       subjects:
         data?.subjects?.map((subject: any) => subject.id.toString()) ||
         relatedData?.subjects?.map((subject: any) => subject.id.toString()) ||
@@ -109,6 +110,14 @@ const TeacherForm = ({
 
   // Destructure related data like subjects
   const { subjects } = relatedData;
+  const formattedBirthday = data?.birthday
+    ? new Date(data.birthday).toISOString().split("T")[0]
+    : undefined;
+  console.log(formattedBirthday);
+  console.log(
+    "Birthday Default Value:",
+    data?.birthday?.toISOString().split("T")[0]
+  );
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
@@ -189,7 +198,9 @@ const TeacherForm = ({
         <InputField
           label="Birthday"
           name="birthday"
-          defaultValue={data?.birthday?.toISOString().split("T")[0]}
+          defaultValue={
+            data?.birthday ? data.birthday.toISOString().split("T")[0] : ""
+          }
           register={register}
           error={errors.birthday}
           type="date"
@@ -220,28 +231,28 @@ const TeacherForm = ({
         />
         {/* MultiSelect Component for Subjects */}
         <Controller
-  name="subjects"
-  control={control}
-  render={({ field }) => {
-    console.log("field.value:", field.value); // Debug log
+          name="subjects"
+          control={control}
+          render={({ field }) => {
+            console.log("field.value:", field.value); // Debug log
 
-    return (
-      <MultiSelect
-        label="Subjects"
-        options={subjects.map((subject: any) => ({
-          id: subject.id.toString(),
-          label: subject.name,
-        }))}
-        value={field.value || []}
-        onChange={(newValue) => {
-          console.log("New value:", newValue); // Debug log
-          field.onChange(newValue);
-        }}
-        error={errors.subjects}
-      />
-    );
-  }}
-/>
+            return (
+              <MultiSelect
+                label="Subjects"
+                options={subjects.map((subject: any) => ({
+                  id: subject.id.toString(),
+                  label: subject.name,
+                }))}
+                value={field.value || []}
+                onChange={(newValue) => {
+                  console.log("New value:", newValue); // Debug log
+                  field.onChange(newValue);
+                }}
+                error={errors.subjects}
+              />
+            );
+          }}
+        />
 
         {/* Image Upload Section */}
         <div className="flex flex-col gap-2 w-full md:w-1/2">
@@ -265,14 +276,27 @@ const TeacherForm = ({
               );
             }}
           </CldUploadWidget>
-          {img && (
+          {/* Conditional rendering for image or no image message */}
+          {img ? (
             <Image
               src={img.secure_url || img}
               alt="Teacher photo"
-              width={100}
-              height={100}
+              width={50}
+              height={50}
               className="mt-2 rounded-md"
             />
+          ) : data?.img ? (
+            <Image
+              src={data.img}
+              alt="Teacher photo"
+              width={50}
+              height={50}
+              className="mt-2 rounded-md"
+            />
+          ) : (
+            <span className="text-gray-500 mt-2 text-xs">
+              No image available
+            </span>
           )}
         </div>
       </div>
