@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useFormState } from "react-dom";
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
 import { FormContainerProps } from "./form-container";
 import { deleteSubject } from "@/actions/subject-actions";
 import { deleteClass } from "@/actions/class-actions";
@@ -20,6 +20,8 @@ import { deleteAttendance } from "@/actions/attendance-actions";
 import { deleteEvent } from "@/actions/event-actions";
 import { deleteAnnouncement } from "@/actions/announcement-actions";
 import { deleteGrade } from "@/actions/grade-actions";
+import { deleteAcademicYear } from "@/actions/academic-year-actions";
+import { deleteDepartment } from "@/actions/department-actions";
 
 const deleteActionMap = {
   subject: deleteSubject,
@@ -35,6 +37,8 @@ const deleteActionMap = {
   event: deleteEvent,
   announcement: deleteAnnouncement,
   grade: deleteGrade,
+  academicYear: deleteAcademicYear,
+  department: deleteDepartment,
 };
 
 // USE LAZY LOADING
@@ -43,6 +47,9 @@ const deleteActionMap = {
 // import StudentForm from "./forms/StudentForm";
 
 const TeacherForm = dynamic(() => import("./forms/teacher-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const AcademicYearForm = dynamic(() => import("./forms/academic-year-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const StudentForm = dynamic(() => import("./forms/student-form"), {
@@ -81,6 +88,9 @@ const AnnouncementForm = dynamic(() => import("./forms/announcement-form"), {
 const ExamForm = dynamic(() => import("./forms/exam-form"), {
   loading: () => <h1>Loading...</h1>,
 });
+const DepartmentForm = dynamic(() => import("./forms/department-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
 
 const forms: {
   [key: string]: (
@@ -96,6 +106,13 @@ const forms: {
       data={data}
       setOpen={setOpen}
       relatedData={relatedData}
+    />
+  ),
+  academicYear: (setOpen, type, data) => (
+    <AcademicYearForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
     />
   ),
   class: (setOpen, type, data, relatedData) => (
@@ -126,11 +143,7 @@ const forms: {
     />
   ),
   parent: (setOpen, type, data) => (
-    <ParentForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-    />
+    <ParentForm type={type} data={data} setOpen={setOpen} />
   ),
   exam: (setOpen, type, data, relatedData) => (
     <ExamForm
@@ -139,25 +152,63 @@ const forms: {
       setOpen={setOpen}
       relatedData={relatedData}
     />
-    
   ),
   lesson: (setOpen, type, data, relatedData) => (
-    <LessonForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
+    <LessonForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
   ),
   assignment: (setOpen, type, data, relatedData) => (
-    <AssignmentForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
+    <AssignmentForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
   ),
   result: (setOpen, type, data, relatedData) => (
-    <ResultForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
+    <ResultForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
   ),
   attendance: (setOpen, type, data, relatedData) => (
-    <AttendanceForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
+    <AttendanceForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
   ),
   event: (setOpen, type, data, relatedData) => (
-    <EventForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
+    <EventForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
   ),
   announcement: (setOpen, type, data, relatedData) => (
-    <AnnouncementForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
+    <AnnouncementForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+
+  department: (setOpen, type, data,relatedData) => (
+    <DepartmentForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
   ),
 };
 

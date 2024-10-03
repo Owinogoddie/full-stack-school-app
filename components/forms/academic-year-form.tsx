@@ -3,8 +3,8 @@ import InputField from "../input-field";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { createSubject, updateSubject } from "@/actions/subject-actions";
-import { SubjectSchema, subjectSchema } from "@/schemas/subject-schema";
+import { createAcademicYear, updateAcademicYear } from "@/actions/academic-year-actions";
+import { AcademicYearSchema, academicYearSchema } from "@/schemas/academic-year-schema";
 import { useForm } from "react-hook-form";
 
 type ResponseState = {
@@ -13,24 +13,22 @@ type ResponseState = {
   message?: string;
 };
 
-const SubjectForm = ({
+const AcademicYearForm = ({
   type,
   data,
   setOpen,
-  // relatedData
 }: {
   type: "create" | "update";
   data?: any;
   setOpen: Dispatch<SetStateAction<boolean>>;
-  relatedData?:any
 }) => {
-  const schema = subjectSchema;
+  const schema = academicYearSchema;
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<SubjectSchema>({
+  } = useForm<AcademicYearSchema>({
     resolver: zodResolver(schema),
     defaultValues: {
       ...data,
@@ -45,9 +43,10 @@ const SubjectForm = ({
   const onSubmit = handleSubmit(async (formData) => {
     let responseState: ResponseState;
     if (type === "create") {
-      responseState = await createSubject(formData);
+      console.log(formData)
+      responseState = await createAcademicYear(formData);
     } else {
-      responseState = await updateSubject(formData);
+      responseState = await updateAcademicYear(formData);
     }
     setState(responseState);
   });
@@ -57,7 +56,7 @@ const SubjectForm = ({
   useEffect(() => {
     if (state.success) {
       toast.success(
-        `Subject has been ${type === "create" ? "created" : "updated"}!`
+        `Academic year has been ${type === "create" ? "created" : "updated"}!`
       );
       setOpen(false);
       router.refresh();
@@ -69,33 +68,32 @@ const SubjectForm = ({
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new Subject" : "Update the Subject"}
+        {type === "create" ? "Create a new Academic Year" : "Update the Academic Year"}
       </h1>
 
       <InputField
-        label="Subject Name"
-        name="name"
+        label="Academic Year"
+        name="year"
         register={register}
-        error={errors.name}
-        placeholder="e.g., Mathematics"
+        error={errors.year}
+        placeholder=" e.g., 2023-2024"
         fullWidth
       />
       <InputField
-        label="Subject Code"
-        name="code"
+        label="Start Date"
+        type="date"
+        name="startDate"
         register={register}
-        error={errors.code}
-        placeholder="e.g., MATH101"
+        error={errors.startDate}
         fullWidth
       />
       <InputField
-        label="Description"
-        name="description"
+        label="End Date"
+        type="date"
+        name="endDate"
         register={register}
-        error={errors.description}
-        placeholder="Subject description"
+        error={errors.endDate}
         fullWidth
-        textarea
       />
 
       <button
@@ -109,4 +107,4 @@ const SubjectForm = ({
   );
 };
 
-export default SubjectForm;
+export default AcademicYearForm;

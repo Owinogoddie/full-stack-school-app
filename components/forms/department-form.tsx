@@ -3,9 +3,16 @@ import InputField from "../input-field";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { createSubject, updateSubject } from "@/actions/subject-actions";
-import { SubjectSchema, subjectSchema } from "@/schemas/subject-schema";
+import {
+  createDepartment,
+  updateDepartment,
+} from "@/actions/department-actions";
+import {
+  DepartmentSchema,
+  departmentSchema,
+} from "@/schemas/department-schema";
 import { useForm } from "react-hook-form";
+import SelectField from "../select-field";
 
 type ResponseState = {
   success: boolean;
@@ -13,24 +20,25 @@ type ResponseState = {
   message?: string;
 };
 
-const SubjectForm = ({
+const DepartmentForm = ({
   type,
   data,
   setOpen,
-  // relatedData
+  relatedData,
 }: {
   type: "create" | "update";
   data?: any;
   setOpen: Dispatch<SetStateAction<boolean>>;
-  relatedData?:any
+  relatedData?: any;
 }) => {
-  const schema = subjectSchema;
+  const schema = departmentSchema;
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
-  } = useForm<SubjectSchema>({
+  } = useForm<DepartmentSchema>({
     resolver: zodResolver(schema),
     defaultValues: {
       ...data,
@@ -45,9 +53,10 @@ const SubjectForm = ({
   const onSubmit = handleSubmit(async (formData) => {
     let responseState: ResponseState;
     if (type === "create") {
-      responseState = await createSubject(formData);
+      console.log(formData)
+      responseState = await createDepartment(formData);
     } else {
-      responseState = await updateSubject(formData);
+      responseState = await updateDepartment(formData);
     }
     setState(responseState);
   });
@@ -57,7 +66,7 @@ const SubjectForm = ({
   useEffect(() => {
     if (state.success) {
       toast.success(
-        `Subject has been ${type === "create" ? "created" : "updated"}!`
+        `Department has been ${type === "create" ? "created" : "updated"}!`
       );
       setOpen(false);
       router.refresh();
@@ -69,23 +78,17 @@ const SubjectForm = ({
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new Subject" : "Update the Subject"}
+        {type === "create"
+          ? "Create a new Department"
+          : "Update the Department"}
       </h1>
 
       <InputField
-        label="Subject Name"
+        label="Department Name"
         name="name"
         register={register}
         error={errors.name}
-        placeholder="e.g., Mathematics"
-        fullWidth
-      />
-      <InputField
-        label="Subject Code"
-        name="code"
-        register={register}
-        error={errors.code}
-        placeholder="e.g., MATH101"
+        placeholder="e.g., Mathematics Department"
         fullWidth
       />
       <InputField
@@ -93,20 +96,36 @@ const SubjectForm = ({
         name="description"
         register={register}
         error={errors.description}
-        placeholder="Subject description"
+        placeholder="Department description"
         fullWidth
         textarea
       />
 
+      <SelectField
+        label="Head of department"
+        options={relatedData.teachers.map((teacher: any) => ({
+          value: teacher.id,
+          label: teacher.firstName,
+        }))}
+        name="headTeacherId"
+        register={register}
+        setValue={setValue}
+        error={errors.headTeacherId}
+        defaultValue={data?.headTeacherId}
+      />
       <button
         type="submit"
         className="bg-blue-400 text-white p-2 rounded-md"
         disabled={isSubmitting}
       >
-        {isSubmitting ? "Submitting..." : type === "create" ? "Create" : "Update"}
+        {isSubmitting
+          ? "Submitting..."
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );
 };
 
-export default SubjectForm;
+export default DepartmentForm;

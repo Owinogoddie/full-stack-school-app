@@ -4,29 +4,32 @@ import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Grade, Prisma, Student } from "@prisma/client";
+import { Grade, Prisma, GradeLevel, Stage, Enrollment } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 
-type GradeList = Grade &{students:Student[]};
+type GradeList = Grade & { enrollments: Enrollment[] };
 
 const GradeListPage = async ({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-
   const { sessionClaims } = auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
 
   const columns = [
     {
-      header: "Grade Level",
-      accessor: "level",
+      header: "Grade Name",
+      accessor: "levelName",
+    },
+    {
+      header: "Stage",
+      accessor: "stage",
     },
     {
       header: "Number of Students",
-      accessor: "studentsCount",
+      accessor: "enrollmentsCount",
       className: "hidden md:table-cell",
     },
     ...(role === "admin"
@@ -44,35 +47,43 @@ const GradeListPage = async ({
       key={item.id}
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
-      <td className="flex items-center gap-4 p-4">{item.level}</td>
-      <td className="hidden md:table-cell">{item.students?.length}</td>
-      <td>
-        <div className="flex items-center gap-2">
-          {role === "admin" && (
-            <>
-              <FormContainer table="grade" type="update" data={item} />
-              <FormContainer table="grade" type="delete" id={item.id} />
-            </>
-          )}
-        </div>
-      </td>
+      <td className="p-4">{item.levelName}</td>
+      <td className="p-4">{item.stage}</td>
+      <td className="hidden md:table-cell p-4">{item.enrollments?.length}</td>
+      {role === "admin" && (
+        <td className="p-4">
+          <div className="flex items-center gap-2">
+            <FormContainer table="grade" type="update" data={item} />
+            <FormContainer table="grade" type="delete" id={item.id} />
+          </div>
+        </td>
+      )}
     </tr>
   );
 
-  const { page, ...queryParams } = searchParams;
+  const { page, search, ...queryParams } = searchParams;
 
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.GradeWhereInput = {};
 
+  if (search) {
+    query.OR = [
+      { levelName: { in: Object.values(GradeLevel).filter(level => level.toLowerCase().includes(search.toLowerCase())) as GradeLevel[] } },
+      { stage: { in: Object.values(Stage).filter(stage => stage.toLowerCase().includes(search.toLowerCase())) as Stage[] } },
+    ];
+  }
+  
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
         switch (key) {
-          case "search":
-            query.level = { equals: parseInt(value) };
+          case "levelName":
+            query.levelName = { equals: value as GradeLevel };
+            break;
+          case "stage":
+            query.stage = { equals: value as Stage };
             break;
           default:
             break;
@@ -85,7 +96,7 @@ const GradeListPage = async ({
     prisma.grade.findMany({
       where: query,
       include: {
-        students: true, // To count the number of students in each grade
+        enrollments: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),

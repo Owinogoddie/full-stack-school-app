@@ -1,74 +1,61 @@
-"use server"
-
+'use server'
 import prisma from "@/lib/prisma";
-
 import { SubjectSchema } from "@/schemas/subject-schema";
 
-type CurrentState = { success: boolean; error: boolean };
+type ResponseState = {
+  success: boolean;
+  error: boolean;
+  message?: string;
+  messages?: string[];
+};
 
-export const createSubject = async (
-  currentState: CurrentState,
-  data: SubjectSchema
-) => {
+export const createSubject = async (data: SubjectSchema): Promise<ResponseState> => {
   try {
     await prisma.subject.create({
       data: {
         name: data.name,
-        teachers: {
-          connect: data.teachers.map((teacherId) => ({ id: teacherId })),
-        },
+        code: data.code,
+        description: data.description || "",
       },
     });
-
-    // revalidatePath("/list/subjects");
-    return { success: true, error: false };
+    return { success: true, error: false, message: "Subject created successfully" };
   } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
+    console.error(err);
+    return { success: false, error: true, message: "Failed to create subject" };
   }
 };
 
-export const updateSubject = async (
-  currentState: CurrentState,
-  data: SubjectSchema
-) => {
+export const updateSubject = async (data: SubjectSchema): Promise<ResponseState> => {
   try {
+    if (!data.id) {
+      throw new Error("Subject ID is required for update");
+    }
     await prisma.subject.update({
-      where: {
-        id: data.id,
-      },
+      where: { id: data.id },
       data: {
         name: data.name,
-        teachers: {
-          set: data.teachers.map((teacherId) => ({ id: teacherId })),
-        },
+        code: data.code,
+        description: data.description,
       },
     });
-
-    // revalidatePath("/list/subjects");
-    return { success: true, error: false };
+    return { success: true, error: false, message: "Subject updated successfully" };
   } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
+    console.error(err);
+    return { success: false, error: true, message: "Failed to update subject" };
   }
 };
 
-export const deleteSubject = async (
-  currentState: CurrentState,
-  data: FormData
-) => {
-  const id = data.get("id") as string;
+export const deleteSubject = async (currentState: ResponseState, formData: FormData): Promise<ResponseState> => {
+  const id = formData.get('id');
   try {
     await prisma.subject.delete({
       where: {
-        id: parseInt(id),
+        id: Number(id),
       },
     });
-
-    // revalidatePath("/list/subjects");
-    return { success: true, error: false };
+    return { success: true, error: false, message: "Subject deleted successfully" };
   } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
+    console.error(err);
+    return { success: false, error: true, message: "Failed to delete Subject" };
   }
 };

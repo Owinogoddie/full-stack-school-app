@@ -13,7 +13,7 @@ const BigCalendarContainer = async ({
     where: {
       ...(type === "teacherId"
         ? { teacherId: id as string }
-        : { classId: id as number }),
+        : { classId: parseInt(id as string, 10) }),
     },
   });
 

@@ -4,12 +4,15 @@ import CountChart from "./count-chart";
 
 const CountChartContainer = async () => {
   const data = await prisma.student.groupBy({
-    by: ["sex"],
-    _count: true,
+    by: ["gender"], // Group by gender
+    _count: {
+      _all: true, // Count all records
+    },
   });
 
-  const boys = data.find((d) => d.sex === "MALE")?._count || 0;
-  const girls = data.find((d) => d.sex === "FEMALE")?._count || 0;
+  // Initialize counts for boys and girls
+  const boysCount = data.find((d) => d.gender === "MALE")?._count._all || 0; // Extract _all from _count
+  const girlsCount = data.find((d) => d.gender === "FEMALE")?._count._all || 0; // Extract _all from _count
 
   return (
     <div className="bg-white rounded-xl w-full h-full p-4">
@@ -19,21 +22,21 @@ const CountChartContainer = async () => {
         <Image src="/moreDark.png" alt="" width={20} height={20} />
       </div>
       {/* CHART */}
-      <CountChart boys={boys} girls={girls} />
+      <CountChart boys={boysCount} girls={girlsCount} />
       {/* BOTTOM */}
       <div className="flex justify-center gap-16">
         <div className="flex flex-col gap-1">
           <div className="w-5 h-5 bg-lamaSky rounded-full" />
-          <h1 className="font-bold">{boys}</h1>
+          <h1 className="font-bold">{boysCount}</h1>
           <h2 className="text-xs text-gray-300">
-            Boys ({Math.round((boys / (boys + girls)) * 100)}%)
+            Boys ({Math.round((boysCount / (boysCount + girlsCount)) * 100)}%)
           </h2>
         </div>
         <div className="flex flex-col gap-1">
           <div className="w-5 h-5 bg-lamaYellow rounded-full" />
-          <h1 className="font-bold">{girls}</h1>
+          <h1 className="font-bold">{girlsCount}</h1>
           <h2 className="text-xs text-gray-300">
-            Girls ({Math.round((girls / (boys + girls)) * 100)}%)
+            Girls ({Math.round((girlsCount / (boysCount + girlsCount)) * 100)}%)
           </h2>
         </div>
       </div>

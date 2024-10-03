@@ -5,13 +5,14 @@ import TableSearch from "@/components/table-search";
 
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Class, Prisma, Student } from "@prisma/client";
+import { Class, Prisma, Student, Grade, School } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 
 import { auth } from "@clerk/nextjs/server";
+import ClientOnlyComponent from "@/components/client-only-component";
 
-type StudentList = Student & { class: Class };
+type StudentList = Student & { class: Class | null; grade: Grade; school: School | null };
 
 const StudentListPage = async ({
   searchParams,
@@ -27,8 +28,8 @@ const StudentListPage = async ({
       accessor: "info",
     },
     {
-      header: "Student ID",
-      accessor: "studentId",
+      header: "UPI",
+      accessor: "upi",
       className: "hidden md:table-cell",
     },
     {
@@ -37,8 +38,8 @@ const StudentListPage = async ({
       className: "hidden md:table-cell",
     },
     {
-      header: "Phone",
-      accessor: "phone",
+      header: "Parent Contact",
+      accessor: "parentContact",
       className: "hidden lg:table-cell",
     },
     {
@@ -70,13 +71,13 @@ const StudentListPage = async ({
           className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
         />
         <div className="flex flex-col">
-          <h3 className="font-semibold">{item.name}</h3>
-          <p className="text-xs text-gray-500">{item.class.name}</p>
+          <h3 className="font-semibold">{`${item.firstName} ${item.lastName}`}</h3>
+          <p className="text-xs text-gray-500">{item.class?.name || "N/A"}</p>
         </div>
       </td>
-      <td className="hidden md:table-cell">{item.username}</td>
-      <td className="hidden md:table-cell">{item.class.name[0]}</td>
-      <td className="hidden md:table-cell">{item.phone}</td>
+      <td className="hidden md:table-cell">{item.upi}</td>
+      <td className="hidden md:table-cell">{item.grade.levelName}</td>
+      <td className="hidden md:table-cell">{item.parentContact}</td>
       <td className="hidden md:table-cell">{item.address}</td>
       <td>
         <div className="flex items-center gap-2">
@@ -86,9 +87,6 @@ const StudentListPage = async ({
             </button>
           </Link>
           {role === "admin" && (
-            // <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaPurple">
-            //   <Image src="/delete.png" alt="" width={16} height={16} />
-            // </button>
             <FormContainer table="student" type="delete" id={item.id} />
           )}
         </div>
@@ -118,7 +116,11 @@ const StudentListPage = async ({
             };
             break;
           case "search":
-            query.name = { contains: value, mode: "insensitive" };
+            query.OR = [
+              { firstName: { contains: value, mode: "insensitive" } },
+              { lastName: { contains: value, mode: "insensitive" } },
+              { upi: { contains: value, mode: "insensitive" } },
+            ];
             break;
           default:
             break;
@@ -132,13 +134,14 @@ const StudentListPage = async ({
       where: query,
       include: {
         class: true,
+        grade: true,
+        school: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),
     prisma.student.count({ where: query }),
   ]);
-
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
@@ -154,16 +157,15 @@ const StudentListPage = async ({
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
             {role === "admin" && (
-              // <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              //   <Image src="/plus.png" alt="" width={14} height={14} />
-              // </button>
               <FormContainer table="student" type="create" />
             )}
           </div>
         </div>
       </div>
       {/* LIST */}
+      <ClientOnlyComponent>
       <Table columns={columns} renderRow={renderRow} data={data} />
+      </ClientOnlyComponent>
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>

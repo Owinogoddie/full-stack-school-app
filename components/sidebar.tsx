@@ -13,15 +13,34 @@ const menuItems = [
         visible: ["admin", "teacher", "student", "parent"],
       },
       {
-        icon: "/teacher.png",
-        label: "Teachers",
-        href: "/list/teachers",
+        icon: "/calendar.png",
+        label: "Academic Years",
+        href: "/list/academic-year",
+        visible: ["admin"],
+      },
+      {
+        icon: "/subject.png",
+        label: "Departments",
+        href: "/list/departments",
+        visible: ["admin"],
+      },
+      {
+        icon: "/class.png",
+        label: "Grades",
+        href: "/list/grades",
         visible: ["admin", "teacher"],
       },
       {
-        icon: "/student.png",
-        label: "Students",
-        href: "/list/students",
+        icon: "/class.png",
+        label: "Classes",
+        href: "/list/classes",
+        visible: ["admin", "teacher"],
+      },
+      
+      {
+        icon: "/teacher.png",
+        label: "Teachers",
+        href: "/list/teachers",
         visible: ["admin", "teacher"],
       },
       {
@@ -31,23 +50,19 @@ const menuItems = [
         visible: ["admin", "teacher"],
       },
       {
+        icon: "/student.png",
+        label: "Students",
+        href: "/list/students",
+        visible: ["admin", "teacher"],
+      },
+     
+      {
         icon: "/subject.png",
         label: "Subjects",
         href: "/list/subjects",
         visible: ["admin"],
       },
-      {
-        icon: "/class.png",
-        label: "Classes",
-        href: "/list/classes",
-        visible: ["admin", "teacher"],
-      },
-      {
-        icon: "/class.png",
-        label: "Grades",
-        href: "/list/grades",
-        visible: ["admin", "teacher"],
-      },
+      
       {
         icon: "/lesson.png",
         label: "Lessons",

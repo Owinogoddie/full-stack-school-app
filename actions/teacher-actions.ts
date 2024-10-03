@@ -1,4 +1,4 @@
-"use server"
+"use server";
 
 import prisma from "@/lib/prisma";
 import { TeacherSchema } from "@/schemas/teacher-schema";
@@ -11,19 +11,26 @@ type ResponseState = {
   message?: string;
   messages?: string[];
 };
-
-export const createTeacher = async (formData: TeacherSchema): Promise<ResponseState> => {
+export const createTeacher = async (
+  formData: TeacherSchema
+): Promise<ResponseState> => {
   let user;
   if (!formData.password) {
-    return { success: false, error: true, message: "Password is required for update." };
+    return {
+      success: false,
+      error: true,
+      message: "Password is required for creation.",
+    };
   }
   try {
+    const email = formData.email || ""; // Ensure email is not undefined
+    const username = email.split("@")[0]; // Take the part before the '@'
     // Create user in Clerk
     user = await clerkClient.users.createUser({
-      username: formData.username,
+      username,
       password: formData.password,
-      firstName: formData.name,
-      lastName: formData.surname,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
       publicMetadata: { role: "teacher" },
     });
 
@@ -31,21 +38,30 @@ export const createTeacher = async (formData: TeacherSchema): Promise<ResponseSt
     await prisma.teacher.create({
       data: {
         id: user.id,
-        username: formData.username,
-        name: formData.name,
-        surname: formData.surname,
-        email: formData.email || null,
-        phone: formData.phone || null,
+        tscNumber: formData.tscNumber,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dateOfBirth: new Date(formData.dateOfBirth),
+        gender: formData.gender,
+        nationalId: formData.nationalId,
+        email: formData.email || "",
+        phone: formData.phone,
         address: formData.address,
-        img: formData.img || null,
-        bloodType: formData.bloodType,
-        sex: formData.sex,
-        birthday: formData.birthday,
+        qualifications: formData.qualifications,
+        specializations: formData.specializations,
+        employmentStatus: formData.employmentStatus,
+        hireDate: new Date(formData.hireDate),
         subjects: {
           connect: formData.subjects?.map((subjectId: string) => ({
             id: parseInt(subjectId),
           })),
         },
+        school: formData.schoolId
+          ? { connect: { id: formData.schoolId.toString() } }
+          : undefined,
+        department: formData.departmentId
+          ? { connect: { id: formData.departmentId } }
+          : undefined,
       },
     });
 
@@ -68,37 +84,51 @@ export const createTeacher = async (formData: TeacherSchema): Promise<ResponseSt
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         const targetField = err.meta?.target;
-        return { success: false, error: true, message: `The ${targetField} is already in use. Please try another.` };
+        return {
+          success: false,
+          error: true,
+          message: `The ${targetField} is already in use. Please try another.`,
+        };
       }
     }
 
-    return { success: false, error: true, message: err.message || "An error occurred during creation." };
+    return {
+      success: false,
+      error: true,
+      message: err.message || "An error occurred during creation.",
+    };
   }
 };
 
 export const updateTeacher = async (formData: any): Promise<ResponseState> => {
   if (!formData.id) {
-    return { success: false, error: true, message: "Teacher ID is required for update." };
+    return {
+      success: false,
+      error: true,
+      message: "Teacher ID is required for update.",
+    };
   }
-  
+
   let originalTeacher;
   try {
-    console.log('updating')
+    console.log("updating");
     // Fetch original teacher data for potential rollback
     originalTeacher = await prisma.teacher.findUnique({
       where: { id: formData.id },
-      include: { subjects: true },
+      include: { subjects: true, school: true, department: true },
     });
 
     if (!originalTeacher) {
       return { success: false, error: true, message: "Teacher not found." };
     }
 
+    const email = formData.email || ""; // Ensure email is not undefined
+    const username = email.split("@")[0]; // Take the part before the '@'
     // Update user in Clerk
     await clerkClient.users.updateUser(formData.id, {
-      username: formData.username,
-      firstName: formData.name,
-      lastName: formData.surname,
+      username,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
     });
 
     // Update teacher in Prisma
@@ -107,21 +137,34 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
         id: formData.id,
       },
       data: {
-        username: formData.username,
-        name: formData.name,
-        surname: formData.surname,
-        email: formData.email || null,
-        phone: formData.phone || null,
+        tscNumber: formData.tscNumber,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dateOfBirth: new Date(formData.dateOfBirth),
+        gender: formData.gender,
+        nationalId: formData.nationalId,
+        email: formData.email,
+        phone: formData.phone,
         address: formData.address,
-        img: formData.img || null,
-        bloodType: formData.bloodType,
-        sex: formData.sex,
-        birthday: formData.birthday,
+        qualifications: formData.qualifications,
+        specializations: formData.specializations,
+        employmentStatus: formData.employmentStatus,
+        hireDate: new Date(formData.hireDate),
         subjects: {
           set: formData.subjects?.map((subjectId: string) => ({
             id: parseInt(subjectId),
           })),
         },
+        school: formData.schoolId
+          ? { connect: { id: formData.schoolId } }
+          : formData.schoolId === null
+          ? { disconnect: true }
+          : undefined,
+        department: formData.departmentId
+          ? { connect: { id: parseInt(formData.departmentId) } }
+          : formData.departmentId === null
+          ? { disconnect: true }
+          : undefined,
       },
     });
 
@@ -135,18 +178,38 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
         await prisma.teacher.update({
           where: { id: formData.id },
           data: {
-            ...originalTeacher,
+            tscNumber: originalTeacher.tscNumber,
+            firstName: originalTeacher.firstName,
+            lastName: originalTeacher.lastName,
+            dateOfBirth: originalTeacher.dateOfBirth,
+            gender: originalTeacher.gender,
+            nationalId: originalTeacher.nationalId,
+            email: originalTeacher.email,
+            phone: originalTeacher.phone,
+            address: originalTeacher.address,
+            qualifications: originalTeacher.qualifications,
+            specializations: originalTeacher.specializations,
+            employmentStatus: originalTeacher.employmentStatus,
+            hireDate: originalTeacher.hireDate,
             subjects: {
-              set: originalTeacher.subjects.map(subject => ({ id: subject.id })),
+              set: originalTeacher.subjects.map((subject) => ({
+                id: subject.id,
+              })),
             },
+            school: originalTeacher.school
+              ? { connect: { id: originalTeacher.school.id } }
+              : { disconnect: true },
+            department: originalTeacher.department
+              ? { connect: { id: originalTeacher.department.id } }
+              : { disconnect: true },
           },
         });
 
         // Rollback Clerk changes
         await clerkClient.users.updateUser(formData.id, {
-          username: originalTeacher.username,
-          firstName: originalTeacher.name,
-          lastName: originalTeacher.surname,
+          username: originalTeacher.tscNumber,
+          firstName: originalTeacher.firstName,
+          lastName: originalTeacher.lastName,
         });
       } catch (rollbackErr) {
         console.error("Error during rollback: ", rollbackErr);
@@ -163,11 +226,19 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         const targetField = err.meta?.target;
-        return { success: false, error: true, message: `The ${targetField} is already in use. Please try another.` };
+        return {
+          success: false,
+          error: true,
+          message: `The ${targetField} is already in use. Please try another.`,
+        };
       }
     }
 
-    return { success: false, error: true, message: err.message || "An error occurred during update." };
+    return {
+      success: false,
+      error: true,
+      message: err.message || "An error occurred during update.",
+    };
   }
 };
 
@@ -175,9 +246,13 @@ export const deleteTeacher = async (
   prevState: ResponseState,
   formData: FormData
 ): Promise<ResponseState> => {
-  const id = formData.get('id') as string;
+  const id = formData.get("id") as string;
   if (!id) {
-    return { success: false, error: true, message: "Teacher ID is required for deletion." };
+    return {
+      success: false,
+      error: true,
+      message: "Teacher ID is required for deletion.",
+    };
   }
   try {
     await clerkClient.users.deleteUser(id);
@@ -205,6 +280,10 @@ export const deleteTeacher = async (
       }
     }
 
-    return { success: false, error: true, message: err.message || "An error occurred during deletion." };
+    return {
+      success: false,
+      error: true,
+      message: err.message || "An error occurred during deletion.",
+    };
   }
 };

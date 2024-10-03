@@ -1,4 +1,5 @@
 'use server'
+
 import prisma from "@/lib/prisma";
 import { ClassSchema } from "@/schemas/class-schema";
 
@@ -11,15 +12,30 @@ type ResponseState = {
 
 export const createClass = async (formData: ClassSchema): Promise<ResponseState> => {
   try {
-    const { ...dataToCreate } = formData; // Exclude `id`
+    // Create a new object to hold data for creation
+    const dataToCreate: any = { ...formData };
+
+    // Remove supervisorId if it's an empty string
+    if (dataToCreate.supervisorId === "") {
+      delete dataToCreate.supervisorId; // Remove supervisorId from dataToCreate
+    } else {
+      // Validate the supervisorId if it's not empty
+      const supervisorExists = await prisma.teacher.findUnique({
+        where: { id: dataToCreate.supervisorId },
+      });
+      if (!supervisorExists) {
+        return { success: false, error: true, message: "The supervisor ID does not exist." };
+      }
+    }
+
     await prisma.class.create({
       data: dataToCreate,
     });
+
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Error in createClass: ", err);
 
-    // Prisma error handling without instanceof check
     if (err?.code === "P2002") {
       const targetField = err.meta?.target;
       return { success: false, error: true, message: `The ${targetField} is already in use. Please try another.` };
@@ -44,26 +60,29 @@ export const updateClass = async (formData: ClassSchema): Promise<ResponseState>
       return { success: false, error: true, message: "Class not found." };
     }
 
+    // Create an object to hold only the fields we want to update
+    const dataToUpdate: Partial<ClassSchema> = {};
+
+    // Check if class name and capacity are provided and add to the update object
+    if (formData.name) {
+      dataToUpdate.name = formData.name; // Update class name
+    }
+    if (formData.capacity) {
+      dataToUpdate.capacity = formData.capacity; // Update capacity
+    }
+    if (formData.gradeId) {
+      dataToUpdate.gradeId = formData.gradeId; // Update grade ID
+    }
+    
+    // Now update the class with only the necessary fields
     await prisma.class.update({
       where: { id: formData.id },
-      data: formData,
+      data: dataToUpdate,
     });
 
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Error in updateClass: ", err);
-
-    // Rollback on error
-    if (originalClass) {
-      try {
-        await prisma.class.update({
-          where: { id: formData.id },
-          data: originalClass,
-        });
-      } catch (rollbackErr) {
-        console.error("Error during rollback: ", rollbackErr);
-      }
-    }
 
     if (err?.code === "P2002") {
       const targetField = err.meta?.target;
@@ -73,6 +92,8 @@ export const updateClass = async (formData: ClassSchema): Promise<ResponseState>
     return { success: false, error: true, message: err.message || "An error occurred during class update." };
   }
 };
+
+
 
 export const deleteClass = async (currentState: ResponseState, formData: FormData): Promise<ResponseState> => {
   const id = formData.get("id") as string;

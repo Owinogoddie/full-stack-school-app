@@ -4,11 +4,9 @@ import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Prisma, Subject, Teacher } from "@prisma/client";
+import { Subject, Prisma } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
-
-type SubjectList = Subject & { teachers: Teacher[] };
 
 const SubjectListPage = async ({
   searchParams,
@@ -20,56 +18,105 @@ const SubjectListPage = async ({
 
   const columns = [
     {
-      header: "Subject Name",
+      header: "Name",
       accessor: "name",
+    },
+    {
+      header: "Code",
+      accessor: "code",
+    },
+    {
+      header: "Description",
+      accessor: "description",
+      className: "hidden md:table-cell",
     },
     {
       header: "Teachers",
       accessor: "teachers",
-      className: "hidden md:table-cell",
+      className: "hidden lg:table-cell",
     },
     {
-      header: "Actions",
-      accessor: "action",
+      header: "Grades",
+      accessor: "grades",
+      className: "hidden lg:table-cell",
     },
+    {
+      header: "Lessons",
+      accessor: "lessons",
+      className: "hidden xl:table-cell",
+    },
+    {
+      header: "Learning Areas",
+      accessor: "learningAreas",
+      className: "hidden xl:table-cell",
+    },
+    ...(role === "admin"
+      ? [
+          {
+            header: "Actions",
+            accessor: "action",
+          },
+        ]
+      : []),
   ];
+  const MAX_DESCRIPTION_LENGTH = 20;
 
-  const renderRow = (item: SubjectList) => (
+  const trimText = (text: string | undefined, maxLength: number) => {
+    if (!text) return ""; // Return empty if no text is provided
+    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text; // Trim and add ellipsis
+  };
+  const renderRow = (item: Subject & {
+    teachers: { id: number }[];
+    grades: { id: number }[];
+    lessons: { id: number }[];
+    learningAreas: { id: number }[];
+  }) => (
     <tr
       key={item.id}
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
-      <td className="flex items-center gap-4 p-4">{item.name}</td>
-      <td className="hidden md:table-cell">
-        {item.teachers.map((teacher) => teacher.name).join(",")}
-      </td>
-      <td>
-        <div className="flex items-center gap-2">
-          {role === "admin" && (
-            <>
-              <FormContainer table="subject" type="update" data={item} />
-              <FormContainer table="subject" type="delete" id={item.id} />
-            </>
-          )}
-        </div>
-      </td>
+      <td className="p-4">{item.name}</td>
+      <td className="p-4">{item.code}</td>
+      <td className="hidden md:table-cell p-4">{trimText(item.description, MAX_DESCRIPTION_LENGTH)}</td>
+     <td className="hidden lg:table-cell p-4">{item.teachers.length}</td>
+      <td className="hidden lg:table-cell p-4">{item.grades.length}</td>
+      <td className="hidden xl:table-cell p-4">{item.lessons.length}</td>
+      <td className="hidden xl:table-cell p-4">{item.learningAreas.length}</td>
+      {role === "admin" && (
+        <td className="p-4">
+          <div className="flex items-center gap-2">
+            <FormContainer table="subject" type="update" data={item} />
+            <FormContainer table="subject" type="delete" id={item.id} />
+          </div>
+        </td>
+      )}
     </tr>
   );
 
-  const { page, ...queryParams } = searchParams;
+  const { page, search, ...queryParams } = searchParams;
 
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.SubjectWhereInput = {};
 
+  if (search) {
+    query.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { code: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+  
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
         switch (key) {
-          case "search":
-            query.name = { contains: value, mode: "insensitive" };
+          case "name":
+            query.name = { equals: value };
+            break;
+          case "code":
+            query.code = { equals: value };
             break;
           default:
             break;
@@ -81,11 +128,14 @@ const SubjectListPage = async ({
   const [data, count] = await prisma.$transaction([
     prisma.subject.findMany({
       where: query,
-      include: {
-        teachers: true,
-      },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
+      include: {
+        teachers: { select: { id: true } },
+        grades: { select: { id: true } },
+        lessons: { select: { id: true } },
+        learningAreas: { select: { id: true } },
+      },
     }),
     prisma.subject.count({ where: query }),
   ]);
@@ -104,9 +154,7 @@ const SubjectListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === "admin" && (
-              <FormContainer table="subject" type="create" />
-            )}
+            {role === "admin" && <FormContainer table="subject" type="create" />}
           </div>
         </div>
       </div>

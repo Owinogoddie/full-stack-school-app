@@ -16,8 +16,10 @@ import {
 import MultiSelect from "../multi-select";
 import { createTeacher, updateTeacher } from "@/actions/teacher-actions";
 import SelectField from "../select-field";
-
-// Type for the response state
+import {
+  qualificationsOptions,
+  specializationsOptions,
+} from "@/lib/teacher-options";
 type ResponseState = {
   success: boolean;
   error: boolean;
@@ -36,63 +38,77 @@ const TeacherForm = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
-  // Conditional type for form data schema
   const schema = type === "create" ? teacherSchema : teacherUpdateSchema;
 
-  // Set up form handling with react-hook-form
-  console.log(relatedData.subjects);
-  console.log(data.subjects);
   const {
     register,
     handleSubmit,
     setValue,
     control,
     formState: { errors, isSubmitting },
+    watch, // Watch function
+    setError, // Set custom error
+    clearErrors, // Clear custom error
   } = useForm<TeacherSchema>({
     resolver: zodResolver(schema),
+
     defaultValues: {
       ...data,
-      birthday: data?.birthday?.toISOString().split("T")[0],
+      dateOfBirth: data?.dateOfBirth?.toISOString().split("T")[0],
+      hireDate: data?.hireDate?.toISOString().split("T")[0],
       subjects:
-        data?.subjects?.map((subject: any) => subject.id.toString()) ||
-        relatedData?.subjects?.map((subject: any) => subject.id.toString()) ||
-        [],
+        data?.subjects?.map((subject: any) => subject.id.toString()) || [],
+      // classes: data?.classes?.map((cls: any) => cls.id.toString()) || [],
     },
   });
-  // console.log(relatedData)
+
   const [img, setImg] = useState<any>(data?.img);
   const [state, setState] = useState<ResponseState>({
     success: false,
     error: false,
   });
 
-  // Submit handler for the form
-  const onSubmit = handleSubmit(async (formData) => {
-    console.log("Submitting form:", formData);
-    let responseState: ResponseState;
+  const password = watch("password");
+  const repeatPassword = watch("repeatPassword");
 
+  useEffect(() => {
+    if (password && repeatPassword) {
+      if (password !== repeatPassword) {
+        setError("repeatPassword", {
+          type: "manual",
+          message: "Passwords do not match!",
+        });
+      } else {
+        clearErrors("repeatPassword");
+      }
+    }
+  }, [password, repeatPassword, setError, clearErrors]);
+
+  const onSubmit = handleSubmit(async (formData) => {
+    if (formData.password && formData.password !== formData.repeatPassword) {
+      toast.error("Passwords do not match!");
+      return;
+    }
+
+    let responseState: ResponseState;
     if (type === "create") {
       responseState = await createTeacher({
         ...formData,
         img: img?.secure_url || img,
       });
     } else {
-      console.log("Updating teacher", formData);
       responseState = await updateTeacher({
         ...formData,
         img: img?.secure_url || img,
       });
     }
 
-    console.log("Response state:", responseState);
     setState(responseState);
   });
 
   const router = useRouter();
 
-  // Handle side effects after form submission
   useEffect(() => {
-    console.log(type);
     if (state.success) {
       toast.success(
         `Teacher has been ${type === "create" ? "created" : "updated"}!`
@@ -108,16 +124,7 @@ const TeacherForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  // Destructure related data like subjects
   const { subjects } = relatedData;
-  const formattedBirthday = data?.birthday
-    ? new Date(data.birthday).toISOString().split("T")[0]
-    : undefined;
-  console.log(formattedBirthday);
-  console.log(
-    "Birthday Default Value:",
-    data?.birthday?.toISOString().split("T")[0]
-  );
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
@@ -131,27 +138,38 @@ const TeacherForm = ({
       </span>
       <div className="flex flex-wrap gap-4">
         <InputField
-          label="Username"
-          name="username"
-          defaultValue={data?.username}
-          register={register}
-          error={errors?.username}
-        />
-        <InputField
           label="Email"
           name="email"
           defaultValue={data?.email}
           register={register}
           error={errors?.email}
+          placeholder="Enter Email e.g xxx@ccc.com"
+          fullWidth
         />
         {type === "create" && (
-          <InputField
-            label="Password"
-            name="password"
-            type="password"
-            register={register}
-            error={errors.password}
-          />
+          <>
+            <InputField
+              label="Password"
+              name="password"
+              type="password"
+              register={register}
+              error={errors.password}
+              placeholder="Enter password"
+            />
+            <InputField
+              label="Repeat Password"
+              name="repeatPassword"
+              type="password"
+              register={register}
+              error={errors.repeatPassword}
+              placeholder="Enter password"
+            />
+            {errors.repeatPassword && (
+              <p className="text-red-500 text-xs">
+                {errors.repeatPassword.message}
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -161,18 +179,28 @@ const TeacherForm = ({
       </span>
       <div className="flex flex-wrap gap-4">
         <InputField
-          label="First Name"
-          name="name"
-          defaultValue={data?.name}
+          label="TSC Number"
+          name="tscNumber"
+          defaultValue={data?.tscNumber}
           register={register}
-          error={errors.name}
+          error={errors.tscNumber}
+          placeholder="Enter TSC NO"
+        />
+        <InputField
+          label="First Name"
+          name="firstName"
+          defaultValue={data?.firstName}
+          register={register}
+          error={errors.firstName}
+          placeholder="Enter First Name"
         />
         <InputField
           label="Last Name"
-          name="surname"
-          defaultValue={data?.surname}
+          name="lastName"
+          defaultValue={data?.lastName}
           register={register}
-          error={errors.surname}
+          error={errors.lastName}
+          placeholder="Enter Last Name"
         />
         <InputField
           label="Phone"
@@ -180,6 +208,15 @@ const TeacherForm = ({
           defaultValue={data?.phone}
           register={register}
           error={errors.phone}
+          placeholder="Enter Phone"
+        />
+        <InputField
+          label="National ID"
+          name="nationalId"
+          defaultValue={data?.nationalId}
+          register={register}
+          error={errors.nationalId}
+          placeholder="Enter National Id"
         />
         <InputField
           label="Address"
@@ -187,120 +224,181 @@ const TeacherForm = ({
           defaultValue={data?.address}
           register={register}
           error={errors.address}
+          placeholder="Enter your adress"
         />
         <InputField
-          label="Blood Type"
-          name="bloodType"
-          defaultValue={data?.bloodType}
+          label="Date of Birth"
+          name="dateOfBirth"
+          defaultValue={data?.dateOfBirth?.toISOString().split("T")[0]}
           register={register}
-          error={errors.bloodType}
-        />
-        <InputField
-          label="Birthday"
-          name="birthday"
-          defaultValue={
-            data?.birthday ? data.birthday.toISOString().split("T")[0] : ""
-          }
-          register={register}
-          error={errors.birthday}
+          error={errors.dateOfBirth}
           type="date"
+          fullWidth
         />
-
-        {data && (
-          <InputField
-            label="Id"
-            name="id"
-            defaultValue={data?.id}
-            register={register}
-            error={errors?.id}
-            hidden
-          />
-        )}
-
         <SelectField
-          label="Sex"
+          label="Gender"
           options={[
             { value: "MALE", label: "Male" },
             { value: "FEMALE", label: "Female" },
+            { value: "OTHER", label: "Other" },
           ]}
-          name="sex"
+          name="gender"
           register={register}
           setValue={setValue}
-          error={errors.sex}
-          defaultValue={data?.sex}
+          error={errors.gender}
+          defaultValue={data?.gender}
         />
-        {/* MultiSelect Component for Subjects */}
+      </div>
+
+      {/* Employment Information */}
+      <span className="text-xs text-gray-400 font-medium">
+        Employment Information
+      </span>
+      <div className="flex flex-wrap gap-4">
+        <InputField
+          label="Hire Date"
+          name="hireDate"
+          defaultValue={data?.hireDate?.toISOString().split("T")[0]}
+          register={register}
+          error={errors.hireDate}
+          type="date"
+          fullWidth
+        />
+        <SelectField
+          label="Employment Status"
+          options={[
+            { value: "FULL_TIME", label: "Full Time" },
+            { value: "PART_TIME", label: "Part Time" },
+            { value: "CONTRACT", label: "Contract" },
+          ]}
+          name="employmentStatus"
+          register={register}
+          setValue={setValue}
+          error={errors.employmentStatus}
+          defaultValue={data?.employmentStatus}
+        />
+        <SelectField
+          label="Department"
+          options={relatedData.departments.map((department: any) => ({
+            value: department.id,
+            label: `${department.name}`,
+          }))} // Mapping related data for teachers
+          name="departmentId"
+          register={register}
+          setValue={setValue}
+          error={errors.departmentId}
+          defaultValue={data?.supervisorId}
+        />
+      </div>
+
+      {/* Subjects and Classes */}
+      <span className="text-xs text-gray-400 font-medium">
+        Teaching Information
+      </span>
+      <div className="flex flex-wrap gap-4">
         <Controller
           name="subjects"
           control={control}
-          render={({ field }) => {
-            console.log("field.value:", field.value); // Debug log
-
-            return (
-              <MultiSelect
-                label="Subjects"
-                options={subjects.map((subject: any) => ({
-                  id: subject.id.toString(),
-                  label: subject.name,
-                }))}
-                value={field.value || []}
-                onChange={(newValue) => {
-                  console.log("New value:", newValue); // Debug log
-                  field.onChange(newValue);
-                }}
-                error={errors.subjects}
-              />
-            );
-          }}
-        />
-
-        {/* Image Upload Section */}
-        <div className="flex flex-col gap-2 w-full md:w-1/2">
-          <label className="text-xs text-gray-500">Photo</label>
-          <CldUploadWidget
-            uploadPreset="ex-academy"
-            onSuccess={(result, { widget }) => {
-              setImg(result.info);
-              widget.close();
-            }}
-          >
-            {({ open }) => {
-              return (
-                <div
-                  className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
-                  onClick={() => open()}
-                >
-                  <Image src="/upload.png" alt="" width={28} height={28} />
-                  <span>Upload a photo</span>
-                </div>
-              );
-            }}
-          </CldUploadWidget>
-          {/* Conditional rendering for image or no image message */}
-          {img ? (
-            <Image
-              src={img.secure_url || img}
-              alt="Teacher photo"
-              width={50}
-              height={50}
-              className="mt-2 rounded-md"
+          render={({ field }) => (
+            <MultiSelect
+              label="Subjects"
+              options={subjects.map((subject: any) => ({
+                id: subject.id.toString(),
+                label: subject.name,
+              }))}
+              value={field.value || []}
+              onChange={(newValue) => field.onChange(newValue)}
+              error={errors.subjects}
             />
-          ) : data?.img ? (
-            <Image
-              src={data.img}
-              alt="Teacher photo"
-              width={50}
-              height={50}
-              className="mt-2 rounded-md"
-            />
-          ) : (
-            <span className="text-gray-500 mt-2 text-xs">
-              No image available
-            </span>
           )}
-        </div>
+        />
+        {/* <Controller
+          name="classes"
+          control={control}
+          render={({ field }) => (
+            <MultiSelect
+              label="Classes"
+              options={classes.map((cls: any) => ({
+                id: cls.id.toString(),
+                label: cls.name,
+              }))}
+              value={field.value || []}
+              onChange={(newValue) => field.onChange(newValue)}
+              error={errors.classes}
+            />
+          )}
+        /> */}
       </div>
 
+      {/* Qualifications and Specializations */}
+      <span className="text-xs text-gray-400 font-medium">
+        Qualifications and Specializations
+      </span>
+      <div className="flex flex-wrap gap-4">
+        <Controller
+          name="qualifications"
+          control={control}
+          render={({ field }) => (
+            <MultiSelect
+              label="Qualifications"
+              options={qualificationsOptions.map((option) => ({
+                id: option.id.toString(),
+                label: option.label,
+              }))}
+              value={field.value || []}
+              onChange={(newValue) => field.onChange(newValue)}
+              error={errors.qualifications}
+            />
+          )}
+        />
+        <Controller
+          name="specializations"
+          control={control}
+          render={({ field }) => (
+            <MultiSelect
+              label="Specializations"
+              options={specializationsOptions.map((option) => ({
+                id: option.id,
+                label: option.label,
+              }))}
+              value={field.value || []}
+              onChange={(newValue) => field.onChange(newValue)}
+              error={errors.specializations}
+            />
+          )}
+        />
+      </div>
+
+      {/* Profile Image */}
+      <div>
+        <CldUploadWidget
+          uploadPreset="ex-academy"
+          onSuccess={(result, { widget }) => {
+            setImg(result.info);
+            widget.close();
+          }}
+        >
+          {({ open }) => {
+            return (
+              <div
+                className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
+                onClick={() => open()}
+              >
+                <Image src="/upload.png" alt="" width={28} height={28} />
+                <span>Upload a photo</span>
+              </div>
+            );
+          }}
+        </CldUploadWidget>
+        {img && (
+          <Image
+            src={img.secure_url || img}
+            alt="Profile Image"
+            width={50}
+            height={50}
+          />
+        )}
+      </div>
       {/* Error Display */}
       {state.error && (
         <div className="mt-4 p-4 border border-red-300 rounded-md bg-red-50">
@@ -320,22 +418,15 @@ const TeacherForm = ({
           )}
         </div>
       )}
-
-      {/* Submit Button */}
       <button
         type="submit"
         className="bg-blue-400 text-white p-2 rounded-md relative"
         disabled={isSubmitting}
       >
         {isSubmitting ? (
-          <>
-            <span className="opacity-0">
-              {type === "create" ? "Create" : "Update"}
-            </span>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-5 h-5 border-t-2 border-white border-solid rounded-full animate-spin"></div>
-            </div>
-          </>
+          <div className="flex items-center justify-center">
+            <div className="w-5 h-5 border-t-2 border-white border-solid rounded-full animate-spin"></div>
+          </div>
         ) : type === "create" ? (
           "Create"
         ) : (

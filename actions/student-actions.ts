@@ -2,8 +2,8 @@
 
 import prisma from "@/lib/prisma";
 import { StudentSchema } from "@/schemas/student-schema";
-import { clerkClient } from "@clerk/nextjs/server";
 import { Prisma } from "@prisma/client";
+import { clerkClient } from "@clerk/nextjs/server";
 
 type ResponseState = {
   success: boolean;
@@ -15,45 +15,66 @@ type ResponseState = {
 export const createStudent = async (
   data: StudentSchema
 ): Promise<ResponseState> => {
-  let user;
+  let user:any;
+  if (!data.password) {
+    return {
+      success: false,
+      error: true,
+      message: "Password is required for creation.",
+    };
+  }
   try {
-    const classItem = await prisma.class.findUnique({
-      where: { id: data.classId },
-      include: { _count: { select: { students: true } } },
-    });
-
-    if (classItem && classItem.capacity === classItem._count.students) {
-      return { success: false, error: true, message: "Class capacity reached." };
-    }
-
+    // Create user in Clerk
+    const username = `${data.firstName}${data.lastName}`.toLowerCase();
     user = await clerkClient.users.createUser({
-      username: data.username,
+      username,
       password: data.password,
-      firstName: data.name,
-      lastName: data.surname,
+      firstName: data.firstName,
+      lastName: data.lastName,
       publicMetadata: { role: "student" },
     });
 
-    await prisma.student.create({
-      data: {
-        id: user.id,
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email || null,
-        phone: data.phone || null,
-        address: data.address,
-        img: data.img || null,
-        bloodType: data.bloodType,
-        sex: data.sex,
-        birthday: data.birthday,
-        gradeId: data.gradeId,
-        classId: data.classId,
-        parentId: data.parentId,
-      },
+    // Create student and enrollment in Prisma
+    await prisma.$transaction(async (prisma) => {
+      const student = await prisma.student.create({
+        data: {
+          id: user.id,
+          upi: data.upi,
+          admissionNumber: data.admissionNumber,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          dateOfBirth: new Date(data.dateOfBirth),
+          gender: data.gender,
+          nationalId: data.nationalId,
+          parentName: data.parentName,
+          parentContact: data.parentContact,
+          parentEmail: data.parentEmail,
+          address: data.address,
+          classId: data.classId,
+          gradeId: data.gradeId,
+          schoolId: data.schoolId,
+          parentId: data.parentId,
+          enrollmentDate: new Date(data.enrollmentDate),
+          medicalInfo: data.medicalInfo,
+          specialNeeds: data.specialNeeds,
+          img: data.img || null,
+        },
+      });
+
+      // Create enrollment
+      await prisma.enrollment.create({
+        data: {
+          studentId: student.id,
+          gradeId: data.gradeId,
+          academicYearId: data.academicYearId!, // Assuming this is provided in StudentSchema
+          classId: data.classId,
+          schoolId: data.schoolId,
+          enrollmentDate: new Date(data.enrollmentDate),
+        },
+      });
     });
 
-    return { success: true, error: false, message: "Student created successfully." };
+    return { success: true, error: false, message: "Student created successfully with enrollment." };
   } catch (err: any) {
     console.error("Error in createStudent: ", err);
 
@@ -68,7 +89,6 @@ export const createStudent = async (
       return { success: false, error: true, messages: errorMessages };
     }
 
-    // Handle Prisma known errors
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         const targetField = err.meta?.target;
@@ -81,38 +101,128 @@ export const createStudent = async (
 };
 
 export const updateStudent = async (
-  data: StudentSchema
+  data: any
 ): Promise<ResponseState> => {
+  console.log(data)
   if (!data.id) {
     return { success: false, error: true, message: "Student ID is required for update." };
   }
   
+  let originalStudent:any;
   try {
-    await prisma.student.update({
+    // Fetch original student data for potential rollback
+    originalStudent = await prisma.student.findUnique({
       where: { id: data.id },
-      data: {
-        ...(data.password !== "" && { password: data.password }),
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email || null,
-        phone: data.phone || null,
-        address: data.address,
-        img: data.img || null,
-        bloodType: data.bloodType,
-        sex: data.sex,
-        birthday: data.birthday,
-        gradeId: data.gradeId,
-        classId: data.classId,
-        parentId: data.parentId,
-      },
+      include: { enrollments: { orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+
+    if (!originalStudent) {
+      return { success: false, error: true, message: "Student not found." };
+    }
+
+    const username = `${data.firstName}${data.lastName}`.toLowerCase();
+    // Update user in Clerk
+    await clerkClient.users.updateUser(data.id, {
+      username,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    });
+
+    // Update student and create new enrollment if academic year changed
+    await prisma.$transaction(async (prisma) => {
+      await prisma.student.update({
+        where: { id: data.id },
+        data: {
+          upi: data.upi,
+          admissionNumber: data.admissionNumber,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          dateOfBirth: new Date(data.dateOfBirth),
+          gender: data.gender,
+          nationalId: data.nationalId,
+          parentName: data.parentName,
+          parentContact: data.parentContact,
+          parentEmail: data.parentEmail,
+          address: data.address,
+          classId: data.classId,
+          gradeId: data.gradeId,
+          schoolId: data.schoolId,
+          parentId: data.parentId,
+          enrollmentDate: new Date(data.enrollmentDate),
+          medicalInfo: data.medicalInfo,
+          specialNeeds: data.specialNeeds,
+          img: data.img || null,
+        },
+      });
+
+      // Check if academic year has changed
+      // const latestEnrollment = originalStudent.enrollments[0];
+      // if (latestEnrollment && latestEnrollment.academicYearId !== data.academicYearId) {
+      //   if (!data.id || !data.classId || !data.schoolId) {
+      //     throw new Error("Required fields are missing.");
+      //   }
+      //   // Create new enrollment
+      //   await prisma.enrollment.create({
+      //     data: {
+      //       studentId: data.id,
+      //       gradeId: data.gradeId,
+      //       academicYearId: data.academicYearId!,
+      //       classId: data.classId,
+      //       schoolId: data.schoolId ||undefined,
+      //       enrollmentDate: new Date(),
+      //     },
+      //   });
+      // }
     });
 
     return { success: true, error: false, message: "Student updated successfully." };
   } catch (err: any) {
     console.error("Error in updateStudent: ", err);
     
-    // Handle Prisma known errors
+    // Rollback Prisma changes
+    if (originalStudent) {
+      try {
+        await prisma.student.update({
+          where: { id: data.id },
+          data: {
+            upi: data.upi,
+            admissionNumber: data.admissionNumber,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            dateOfBirth: new Date(data.dateOfBirth),
+            gender: data.gender,
+            nationalId: data.nationalId,
+            parentName: data.parentName,
+            parentContact: data.parentContact,
+            parentEmail: data.parentEmail,
+            address: data.address,
+            classId: data.classId,
+            gradeId: data.gradeId,
+            schoolId: data.schoolId,
+            parentId: data.parentId,
+            enrollmentDate: new Date(data.enrollmentDate),
+            medicalInfo: data.medicalInfo,
+            specialNeeds: data.specialNeeds,
+            img: data.img || null,
+          },
+        });
+        // Rollback Clerk changes
+        await clerkClient.users.updateUser(data.id, {
+          username: `${originalStudent.firstName}${originalStudent.lastName}`.toLowerCase(),
+          firstName: originalStudent.firstName,
+          lastName: originalStudent.lastName,
+        });
+      } catch (rollbackErr) {
+        console.error("Error during rollback: ", rollbackErr);
+      }
+    }
+
+    // If Prisma or Clerk error has `errors`, return all error messages
+    if (err.errors) {
+      const errorMessages = err.errors.map((e: any) => e.message);
+      return { success: false, error: true, messages: errorMessages };
+    }
+
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         const targetField = err.meta?.target;
@@ -128,20 +238,26 @@ export const deleteStudent = async (
   prevState: ResponseState,
   formData: FormData
 ): Promise<ResponseState> => {
-  const id = formData.get('id') as string;
+  const id = formData.get("id") as string;
   if (!id) {
     return { success: false, error: true, message: "Student ID is required for deletion." };
   }
   try {
     await clerkClient.users.deleteUser(id);
 
-    await prisma.student.delete({
-      where: {
-        id: id,
-      },
+    await prisma.$transaction(async (prisma) => {
+      // Delete all enrollments associated with the student
+      await prisma.enrollment.deleteMany({
+        where: { studentId: id },
+      });
+
+      // Delete the student
+      await prisma.student.delete({
+        where: { id: id },
+      });
     });
 
-    return { success: true, error: false, message: "Student deleted successfully." };
+    return { success: true, error: false, message: "Student and associated enrollments deleted successfully." };
   } catch (err: any) {
     console.error("Error in deleteStudent: ", err);
 
@@ -151,7 +267,6 @@ export const deleteStudent = async (
       return { success: false, error: true, messages: errorMessages };
     }
 
-    // Handle Prisma known errors
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2025") {
         return { success: false, error: true, message: "Student not found." };
@@ -161,4 +276,3 @@ export const deleteStudent = async (
     return { success: false, error: true, message: err.message || "An error occurred during deletion." };
   }
 };
-
