@@ -7,7 +7,7 @@ import { Dispatch, SetStateAction, useEffect } from "react";
 import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { AttendanceSchema, attendanceSchema } from "@/schemas/attendance-schema";
+import { AttendanceSchema, attendanceSchema, AttendanceStatus } from "@/schemas/attendance-schema";
 import { createAttendance, updateAttendance } from "@/actions/attendance-actions";
 
 const AttendanceForm = ({
@@ -102,16 +102,21 @@ const AttendanceForm = ({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="present"
-          {...register("present")}
-          defaultChecked={data?.present}
-        />
-        <label htmlFor="present" className="text-sm">
-          Present
-        </label>
+      <div className="flex flex-col gap-2 w-full">
+        <label className="text-xs text-gray-500">Status</label>
+        <select
+          className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+          {...register("status")}
+        >
+          {Object.values(AttendanceStatus).map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+        {errors.status && (
+          <p className="text-xs text-red-400">{errors.status.message}</p>
+        )}
       </div>
       {data && (
         <input type="hidden" value={data.id} {...register("id")} />

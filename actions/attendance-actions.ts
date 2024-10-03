@@ -3,8 +3,10 @@
 import prisma from "@/lib/prisma";
 import { AttendanceSchema } from "@/schemas/attendance-schema";
 
+// Type definition for current state
 type CurrentState = { success: boolean; error: boolean };
 
+// CREATE Attendance
 export const createAttendance = async (
   currentState: CurrentState,
   data: AttendanceSchema
@@ -13,7 +15,7 @@ export const createAttendance = async (
     await prisma.attendance.create({
       data: {
         date: data.date,
-        present: data.present,
+        status: data.status, // Assuming 'present' refers to status, map it accordingly
         studentId: data.studentId,
         lessonId: data.lessonId,
       },
@@ -21,11 +23,12 @@ export const createAttendance = async (
 
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
+    console.error("Error creating attendance: ", err);
     return { success: false, error: true };
   }
 };
 
+// UPDATE Attendance
 export const updateAttendance = async (
   currentState: CurrentState,
   data: AttendanceSchema
@@ -33,6 +36,7 @@ export const updateAttendance = async (
   if (!data.id) {
     return { success: false, error: true };
   }
+
   try {
     await prisma.attendance.update({
       where: {
@@ -40,7 +44,7 @@ export const updateAttendance = async (
       },
       data: {
         date: data.date,
-        present: data.present,
+        status: data.status, // Update attendance status (like "present" or any other status)
         studentId: data.studentId,
         lessonId: data.lessonId,
       },
@@ -48,26 +52,28 @@ export const updateAttendance = async (
 
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
+    console.error("Error updating attendance: ", err);
     return { success: false, error: true };
   }
 };
 
+// DELETE Attendance
 export const deleteAttendance = async (
   currentState: CurrentState,
   data: FormData
 ) => {
   const id = data.get("id") as string;
+
   try {
     await prisma.attendance.delete({
       where: {
-        id: parseInt(id),
+        id: parseInt(id), // Ensure ID is parsed as an integer
       },
     });
 
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
+    console.error("Error deleting attendance: ", err);
     return { success: false, error: true };
   }
 };

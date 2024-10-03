@@ -1,9 +1,7 @@
-
 import Announcements from "@/components/announcements";
 import BigCalendarContainer from "@/components/calendars/big-calendar-container";
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-
 
 const ParentPage = async () => {
   const { userId } = auth();
@@ -12,6 +10,9 @@ const ParentPage = async () => {
   const students = await prisma.student.findMany({
     where: {
       parentId: currentUserId!,
+    },
+    include: {
+      class: true,
     },
   });
 
@@ -23,9 +24,11 @@ const ParentPage = async () => {
           <div className="w-full xl:w-2/3" key={student.id}>
             <div className="h-full bg-white p-4 rounded-md">
               <h1 className="text-xl font-semibold">
-                Schedule ({student.name + " " + student.surname})
+                Schedule ({student.firstName + " " + student.lastName})
               </h1>
-              <BigCalendarContainer type="classId" id={student.classId} />
+              {student.class && (
+                <BigCalendarContainer type="classId" id={student.class.id.toString()} />
+              )}
             </div>
           </div>
         ))}

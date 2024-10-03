@@ -64,7 +64,7 @@ const AssignmentListPage = async ({
       <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
       <td>{item.lesson.class.name}</td>
       <td className="hidden md:table-cell">
-        {item.lesson.teacher.name + " " + item.lesson.teacher.surname}
+        {item.lesson.teacher.firstName + " " + item.lesson.teacher.lastName}
       </td>
       <td className="hidden md:table-cell">
         {new Intl.DateTimeFormat("en-US").format(item.dueDate)}
@@ -151,7 +151,7 @@ const AssignmentListPage = async ({
         lesson: {
           select: {
             subject: { select: { name: true } },
-            teacher: { select: { name: true, surname: true } },
+            teacher: { select: { firstName: true, lastName: true } },
             class: { select: { name: true } },
           },
         },

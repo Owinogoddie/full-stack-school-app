@@ -4,11 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import InputField from "../input-field";
 import { Dispatch, SetStateAction, useEffect } from "react";
-import { useFormState } from "react-dom";
+import { useFormState } from "react-dom"; // Note: Update this import if necessary.
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { ResultSchema, resultSchema } from "@/schemas/result-schema";
-import { createResult,updateResult } from "@/actions/result-actions";
+import { ResultSchema, resultSchema, ExamType } from "@/schemas/result-schema"; // Adjust path as needed
+import { createResult, updateResult } from "@/actions/result-actions";
 
 const ResultForm = ({
   type,
@@ -17,14 +17,15 @@ const ResultForm = ({
   relatedData,
 }: {
   type: "create" | "update";
-  data?: any;
+  data?: ResultSchema; // Use the inferred type for data
   setOpen: Dispatch<SetStateAction<boolean>>;
-  relatedData?: any;
+  relatedData?: any; // Define this type as needed
 }) => {
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset, // Use reset to clear form values when switching between create and update
   } = useForm<ResultSchema>({
     resolver: zodResolver(resultSchema),
     defaultValues: data,
@@ -52,7 +53,13 @@ const ResultForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  const { students, exams, assignments } = relatedData;
+  const { students, subjects, academicYears, grades } = relatedData;
+
+  useEffect(() => {
+    if (data) {
+      reset(data); // Reset the form with existing data when updating
+    }
+  }, [data, reset]);
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
@@ -84,41 +91,85 @@ const ResultForm = ({
           )}
         </div>
         <div className="flex flex-col gap-2 w-full md:w-1/3">
-          <label className="text-xs text-gray-500">Exam (optional)</label>
+          <label className="text-xs text-gray-500">Subject</label>
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("examId")}
+            {...register("subjectId")}
           >
-            <option value="">Select Exam</option>
-            {exams.map((exam: { id: number; title: string }) => (
-              <option value={exam.id} key={exam.id}>
-                {exam.title}
+            {subjects.map((subject: { id: number; name: string }) => (
+              <option value={subject.id} key={subject.id}>
+                {subject.name}
               </option>
             ))}
           </select>
-          {errors.examId && (
-            <p className="text-xs text-red-400">{errors.examId.message}</p>
+          {errors.subjectId && (
+            <p className="text-xs text-red-400">{errors.subjectId.message}</p>
           )}
         </div>
         <div className="flex flex-col gap-2 w-full md:w-1/3">
-          <label className="text-xs text-gray-500">Assignment (optional)</label>
+          <label className="text-xs text-gray-500">Academic Year</label>
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("assignmentId")}
+            {...register("academicYearId")}
           >
-            <option value="">Select Assignment</option>
-            {assignments.map((assignment: { id: number; title: string }) => (
-              <option value={assignment.id} key={assignment.id}>
-                {assignment.title}
+            {academicYears.map((year: { id: number; year: number }) => (
+              <option value={year.id} key={year.id}>
+                {year.year}
               </option>
             ))}
           </select>
-          {errors.assignmentId && (
-            <p className="text-xs text-red-400">
-              {errors.assignmentId.message}
-            </p>
+          {errors.academicYearId && (
+            <p className="text-xs text-red-400">{errors.academicYearId.message}</p>
           )}
         </div>
+        <div className="flex flex-col gap-2 w-full md:w-1/3">
+          <label className="text-xs text-gray-500">Grade</label>
+          <select
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            {...register("gradeId")}
+          >
+            {grades.map((grade: { id: number; levelName: string }) => (
+              <option value={grade.id} key={grade.id}>
+                {grade.levelName}
+              </option>
+            ))}
+          </select>
+          {errors.gradeId && (
+            <p className="text-xs text-red-400">{errors.gradeId.message}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col gap-2 w-full md:w-1/3">
+        <label className="text-xs text-gray-500">Exam Type</label>
+        <select
+          className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+          {...register("examType")}
+        >
+          {Object.values(ExamType).map((type) => (
+            <option value={type} key={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        {errors.examType && (
+          <p className="text-xs text-red-400">{errors.examType.message}</p>
+        )}
+      </div>
+      <div className="flex flex-col gap-2">
+        <InputField
+          label="Result Grade (optional)"
+          name="resultGrade"
+          type="text"
+          register={register}
+          error={errors.resultGrade}
+        />
+        <InputField
+          label="Remarks (optional)"
+          name="remarks"
+          type="text"
+          register={register}
+          error={errors.remarks}
+        />
       </div>
       {data && (
         <input type="hidden" value={data.id} {...register("id")} />

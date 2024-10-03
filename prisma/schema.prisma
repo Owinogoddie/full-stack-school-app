@@ -50,21 +50,21 @@ model AcademicYear {
 }
 
 model Enrollment {
-  id             Int          @id @default(autoincrement())
-  status           EnrollmentStatus @default(ACTIVE)
-  student        Student      @relation(fields: [studentId], references: [id])
+  id             Int              @id @default(autoincrement())
+  status         EnrollmentStatus @default(ACTIVE)
+  student        Student          @relation(fields: [studentId], references: [id])
   studentId      String
-  grade          Grade        @relation(fields: [gradeId], references: [id])
+  grade          Grade            @relation(fields: [gradeId], references: [id])
   gradeId        Int
-  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYear   AcademicYear     @relation(fields: [academicYearId], references: [id])
   academicYearId Int
-  class          Class?       @relation(fields: [classId], references: [id])
+  class          Class?           @relation(fields: [classId], references: [id])
   classId        Int?
-  school         School?      @relation(fields: [schoolId], references: [id])
+  school         School?          @relation(fields: [schoolId], references: [id])
   schoolId       String?
-  enrollmentDate DateTime     @default(now())
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  enrollmentDate DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model Grade {
@@ -239,6 +239,8 @@ model Lesson {
   teacher     Teacher      @relation(fields: [teacherId], references: [id])
   teacherId   String
   attendances Attendance[]
+  assignments Assignment[]
+  exams    Exam[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
@@ -281,6 +283,19 @@ model Assessment {
   updatedAt   DateTime       @updatedAt
 }
 
+model Assignment {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  dueDate     DateTime
+  startDate   DateTime
+  lesson      Lesson   @relation(fields: [lessonId], references: [id])
+  lessonId    Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Project {
   id          Int           @id @default(autoincrement())
   title       String
@@ -293,7 +308,17 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }
+model Exam {
+  id        Int      @id @default(autoincrement())
+  title     String
+  startTime DateTime
+  endTime   DateTime
+  lessonId  Int
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 model Attendance {
   id        Int              @id @default(autoincrement())
   date      DateTime
@@ -464,10 +489,12 @@ enum AttendanceStatus {
 }
 
 enum ExamType {
-  MID_TERM
+  MIDTERM
   END_TERM
-  FINAL
   MOCK
+  FINAL
+  ASSIGNMENT
+  QUIZ
   NATIONAL
 }
 
@@ -477,6 +504,7 @@ enum StudentStatus {
   TRANSFERRED
   SUSPENDED
 }
+
 enum EnrollmentStatus {
   ACTIVE
   COMPLETED

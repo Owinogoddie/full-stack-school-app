@@ -4,107 +4,76 @@ import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Prisma } from "@prisma/client";
+import { Prisma, Result, Student, Subject, AcademicYear, Grade, Class, ExamType } from "@prisma/client";
 import Image from "next/image";
-
 import { auth } from "@clerk/nextjs/server";
+import ClientOnlyComponent from "@/components/client-only-component";
+
+type ResultWithIncludes = Result & {
+  student: Student;
+  subject: Subject;
+  academicYear: AcademicYear;
+  grade: Grade;
+  class: Class | null;
+};
 
 type ResultList = {
   id: number;
-  title: string;
   studentName: string;
-  studentSurname: string;
-  teacherName: string;
-  teacherSurname: string;
+  subjectName: string;
   score: number;
-  className: string;
-  startTime: Date;
+  resultgrade: string | null;
+  className: string | null;
+  term: number;
+  examType: ExamType;
 };
-
 
 const ResultListPage = async ({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
+  const { userId, sessionClaims } = auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const currentUserId = userId;
 
-const { userId, sessionClaims } = auth();
-const role = (sessionClaims?.metadata as { role?: string })?.role;
-const currentUserId = userId;
+  const columns = [
+    { header: "Student", accessor: "studentName" },
+    { header: "Subject", accessor: "subjectName" },
+    { header: "Score", accessor: "score" },
+    { header: "Grade", accessor: "resultgrade" },
+    { header: "Class", accessor: "className" },
+    { header: "Term", accessor: "term" },
+    { header: "Exam Type", accessor: "examType" },
+    ...(role === "admin" || role === "teacher" ? [{ header: "Actions", accessor: "action" }] : []),
+  ];
 
-
-const columns = [
-  {
-    header: "Title",
-    accessor: "title",
-  },
-  {
-    header: "Student",
-    accessor: "student",
-  },
-  {
-    header: "Score",
-    accessor: "score",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Teacher",
-    accessor: "teacher",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Class",
-    accessor: "class",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Date",
-    accessor: "date",
-    className: "hidden md:table-cell",
-  },
-  ...(role === "admin" || role === "teacher"
-    ? [
-        {
-          header: "Actions",
-          accessor: "action",
-        },
-      ]
-    : []),
-];
-
-const renderRow = (item: ResultList) => (
-  <tr
-    key={item.id}
-    className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
-  >
-    <td className="flex items-center gap-4 p-4">{item.title}</td>
-    <td>{item.studentName + " " + item.studentName}</td>
-    <td className="hidden md:table-cell">{item.score}</td>
-    <td className="hidden md:table-cell">
-      {item.teacherName + " " + item.teacherSurname}
-    </td>
-    <td className="hidden md:table-cell">{item.className}</td>
-    <td className="hidden md:table-cell">
-      {new Intl.DateTimeFormat("en-US").format(item.startTime)}
-    </td>
-    <td>
-      <div className="flex items-center gap-2">
-        {(role === "admin" || role === "teacher") && (
-          <>
-            <FormContainer table="result" type="update" data={item} />
-            <FormContainer table="result" type="delete" id={item.id} />
-          </>
-        )}
-      </div>
-    </td>
-  </tr>
-);
+  const renderRow = (item: ResultList) => (
+    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
+      <td className="p-4">{item.studentName}</td>
+      <td>{item.subjectName}</td>
+      <td>{item.score}</td>
+      <td>{item.resultgrade || 'N/A'}</td>
+      <td>{item.className || 'N/A'}</td>
+      <td>{item.term}</td>
+      <td>{item.examType}</td>
+      <td>
+        <ClientOnlyComponent>
+          <div className="flex items-center gap-2">
+            {(role === "admin" || role === "teacher") && (
+              <>
+                <FormContainer table="result" type="update" data={item} />
+                <FormContainer table="result" type="delete" id={item.id} />
+              </>
+            )}
+          </div>
+        </ClientOnlyComponent>
+      </td>
+    </tr>
+  );
 
   const { page, ...queryParams } = searchParams;
-
   const p = page ? parseInt(page) : 1;
-
-  // URL PARAMS CONDITION
 
   const query: Prisma.ResultWhereInput = {};
 
@@ -117,8 +86,9 @@ const renderRow = (item: ResultList) => (
             break;
           case "search":
             query.OR = [
-              { exam: { title: { contains: value, mode: "insensitive" } } },
-              { student: { name: { contains: value, mode: "insensitive" } } },
+              { student: { firstName: { contains: value, mode: "insensitive" } } },
+              { student: { lastName: { contains: value, mode: "insensitive" } } },
+              { subject: { name: { contains: value, mode: "insensitive" } } },
             ];
             break;
           default:
@@ -128,26 +98,18 @@ const renderRow = (item: ResultList) => (
     }
   }
 
-  // ROLE CONDITIONS
-
   switch (role) {
     case "admin":
       break;
     case "teacher":
-      query.OR = [
-        { exam: { lesson: { teacherId: currentUserId! } } },
-        { assignment: { lesson: { teacherId: currentUserId! } } },
-      ];
+      // Adjust this based on how teachers are related to results in your schema
+      query.subject = { teachers: { some: { id: currentUserId! } } };
       break;
-
     case "student":
       query.studentId = currentUserId!;
       break;
-
     case "parent":
-      query.student = {
-        parentId: currentUserId!,
-      };
+      query.student = { parentId: currentUserId! };
       break;
     default:
       break;
@@ -157,27 +119,11 @@ const renderRow = (item: ResultList) => (
     prisma.result.findMany({
       where: query,
       include: {
-        student: { select: { name: true, surname: true } },
-        exam: {
-          include: {
-            lesson: {
-              select: {
-                class: { select: { name: true } },
-                teacher: { select: { name: true, surname: true } },
-              },
-            },
-          },
-        },
-        assignment: {
-          include: {
-            lesson: {
-              select: {
-                class: { select: { name: true } },
-                teacher: { select: { name: true, surname: true } },
-              },
-            },
-          },
-        },
+        student: true,
+        subject: true,
+        academicYear: true,
+        grade: true,
+        class: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
@@ -185,49 +131,41 @@ const renderRow = (item: ResultList) => (
     prisma.result.count({ where: query }),
   ]);
 
-  const data = dataRes.map((item) => {
-    const assessment = item.exam || item.assignment;
-
-    if (!assessment) return null;
-
-    const isExam = "startTime" in assessment;
-
-    return {
-      id: item.id,
-      title: assessment.title,
-      studentName: item.student.name,
-      studentSurname: item.student.surname,
-      teacherName: assessment.lesson.teacher.name,
-      teacherSurname: assessment.lesson.teacher.surname,
-      score: item.score,
-      className: assessment.lesson.class.name,
-      startTime: isExam ? assessment.startTime : assessment.startDate,
-    };
-  });
+  const data: ResultList[] = dataRes.map((item: ResultWithIncludes) => ({
+    id: item.id,
+    studentName: `${item.student.firstName} ${item.student.lastName}`,
+    subjectName: item.subject.name,
+    score: item.score,
+    resultgrade: item.resultgrade,
+    className: item.class?.name || null,
+    term: item.term,
+    examType: item.examType,
+  }));
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
-      {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Results</h1>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <TableSearch />
-          <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            {(role === "admin" || role === "teacher") && (
-              <FormContainer table="result" type="create" />
-            )}
+        <ClientOnlyComponent>
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            <TableSearch />
+            <div className="flex items-center gap-4 self-end">
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                <Image src="/filter.png" alt="" width={14} height={14} />
+              </button>
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                <Image src="/sort.png" alt="" width={14} height={14} />
+              </button>
+              {(role === "admin" || role === "teacher") && (
+                <FormContainer table="result" type="create" />
+              )}
+            </div>
           </div>
-        </div>
+        </ClientOnlyComponent>
       </div>
-      {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={data} />
-      {/* PAGINATION */}
+      <ClientOnlyComponent>
+        <Table columns={columns} renderRow={renderRow} data={data} />
+      </ClientOnlyComponent>
       <Pagination page={p} count={count} />
     </div>
   );

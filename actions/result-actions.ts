@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { ResultSchema } from "@/schemas/result-schema";
+import { ExamType } from "@prisma/client";
 
 type CurrentState = { success: boolean; error: boolean };
 
@@ -14,8 +15,14 @@ export const createResult = async (
       data: {
         score: data.score,
         studentId: data.studentId,
-        examId: data.examId ? data.examId : null,
-        assignmentId: data.assignmentId ? data.assignmentId : null,
+        subjectId: data.subjectId,
+        academicYearId: data.academicYearId,
+        gradeId: data.gradeId,
+        classId: data.classId,
+        resultgrade: data.resultGrade,
+        remarks: data.remarks,
+        term: data.term,
+        examType: data.examType as ExamType,
       },
     });
 
@@ -41,8 +48,14 @@ export const updateResult = async (
       data: {
         score: data.score,
         studentId: data.studentId,
-        examId: data.examId ? data.examId : null,
-        assignmentId: data.assignmentId ? data.assignmentId : null,
+        subjectId: data.subjectId,
+        academicYearId: data.academicYearId,
+        gradeId: data.gradeId,
+        classId: data.classId,
+        resultgrade: data.resultGrade,
+        remarks: data.remarks,
+        term: data.term,
+        examType: data.examType as ExamType,
       },
     });
 
