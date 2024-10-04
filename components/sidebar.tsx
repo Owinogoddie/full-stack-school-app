@@ -71,6 +71,19 @@ const menuItems = [
       },
       {
         icon: "/exam.png",
+        label: "Grade Scale",
+        href: "/list/grade-scale",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+      {
+        icon: "/exam.png",
+        label: "Exams Schedules",
+        href: "/list/exam-schedule",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+     
+      {
+        icon: "/exam.png",
         label: "Exams",
         href: "/list/exams",
         visible: ["admin", "teacher", "student", "parent"],

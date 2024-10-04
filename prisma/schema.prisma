@@ -26,6 +26,8 @@ model School {
   teachers      Teacher[]
   classes       Class[]
   grades        Grade[]
+  exams         Exam[]
+  gradeScales   GradeScale[]
   academicYears AcademicYear[]
   departments   Department[]
   enrollments   Enrollment[]
@@ -45,6 +47,7 @@ model AcademicYear {
   currentStudents Student[]    @relation("CurrentAcademicYear") // List of current students in this academic year
   schoolId        String?
   results         Result[]
+  exams           Exam[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 }
@@ -80,6 +83,7 @@ model Grade {
   students      Student[]
   enrollments   Enrollment[]
   results       Result[]
+  exams         Exam[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -210,6 +214,9 @@ model Subject {
   grades        Grade[]
   lessons       Lesson[]
   results       Result[]
+  exams         Exam[]
+  examSchedules ExamSchedule[]
+  gradeScale    GradeScale[]
   learningAreas LearningArea[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -240,7 +247,7 @@ model Lesson {
   teacherId   String
   attendances Attendance[]
   assignments Assignment[]
-  exams    Exam[]
+  exams       Exam[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
@@ -249,6 +256,8 @@ model Result {
   id             Int          @id @default(autoincrement())
   student        Student      @relation(fields: [studentId], references: [id])
   studentId      String
+  exam           Exam         @relation(fields: [examId], references: [id])
+  examId         Int
   subject        Subject      @relation(fields: [subjectId], references: [id])
   subjectId      Int
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
@@ -258,14 +267,14 @@ model Result {
   class          Class?       @relation(fields: [classId], references: [id])
   classId        Int?
   score          Float
-  resultgrade    String? // e.g., "A", "B", "C", etc.
+  gradeScale     GradeScale   @relation(fields: [gradeScaleId], references: [id])
+  gradeScaleId   Int
+  resultGrade    String? // This will be populated based on the GradeScale
   remarks        String?
-  term           Int // e.g., 1, 2, 3 for terms in a year
-  examType       ExamType
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  @@unique([studentId, subjectId, academicYearId, term, examType])
+  @@unique([studentId, examId, subjectId])
 }
 
 model Assessment {
@@ -308,17 +317,65 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }
+
 model Exam {
+  id             Int            @id @default(autoincrement())
+  title          String
+  description    String?
+  examType       ExamType
+  startDate      DateTime
+  endDate        DateTime
+  lessonId       Int?
+  lesson         Lesson?        @relation(fields: [lessonId], references: [id])
+  subjectId      Int
+  subject        Subject        @relation(fields: [subjectId], references: [id])
+  gradeId        Int
+  grade          Grade          @relation(fields: [gradeId], references: [id])
+  academicYearId Int
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
+  schoolId       String?
+  school         School?        @relation(fields: [schoolId], references: [id])
+  results        Result[]
+  schedules      ExamSchedule[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model ExamSchedule {
   id        Int      @id @default(autoincrement())
-  title     String
+  exam      Exam     @relation(fields: [examId], references: [id])
+  examId    Int
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  subjectId Int
+  date      DateTime
   startTime DateTime
   endTime   DateTime
-  lessonId  Int
-  lesson    Lesson   @relation(fields: [lessonId], references: [id])
-
+  venue     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model GradeScale {
+  id          Int       @id @default(autoincrement())
+  name        String // e.g., "Standard Scale", "Advanced Placement Scale"
+  letterGrade String
+  minScore    Float
+  maxScore    Float
+  gpa         Float?
+  description String?
+  schoolId    String?
+  school      School?   @relation(fields: [schoolId], references: [id])
+  subjectId   Int? // Optional: for subject-specific scales
+  subject     Subject?  @relation(fields: [subjectId], references: [id])
+  examType    ExamType? // Optional: for exam-type specific scales
+  isDefault   Boolean   @default(false)
+  results     Result[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([schoolId, subjectId, examType, isDefault])
+}
+
 model Attendance {
   id        Int              @id @default(autoincrement())
   date      DateTime
@@ -381,10 +438,10 @@ model TransferRecord {
   id           Int      @id @default(autoincrement())
   student      Student  @relation(fields: [studentId], references: [id])
   studentId    String
-  fromSchool   School   @relation("FromSchool", fields: [fromSchoolId], references: [id])
-  fromSchoolId String
-  toSchool     School   @relation("ToSchool", fields: [toSchoolId], references: [id])
-  toSchoolId   String
+  fromSchool   School?  @relation("FromSchool", fields: [fromSchoolId], references: [id])
+  fromSchoolId String?
+  toSchool     School?  @relation("ToSchool", fields: [toSchoolId], references: [id])
+  toSchoolId   String?
   transferDate DateTime
   reason       String?
   createdAt    DateTime @default(now())

@@ -65,11 +65,7 @@ const StudentForm = ({
     if (Object.keys(errors).length > 0) {
       console.log("Validation errors:", errors);
     }
-  }, [errors]);useEffect(() => {
-  if (Object.keys(errors).length > 0) {
-    console.log("Validation errors:", errors);
-  }
-}, [errors]);
+  }, [errors]);
 
   useEffect(() => {
     if (password && repeatPassword) {
@@ -353,14 +349,14 @@ const StudentForm = ({
             register={register}
             error={errors.enrollmentDate}
           />
-          <InputField
+          {/* <InputField
             label="id"
             name="id"
             type="hidden"
             defaultValue={data?.id}
             register={register}
             error={errors.id}
-          />
+          /> */}
         </div>
       </div>
 

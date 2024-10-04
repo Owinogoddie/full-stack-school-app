@@ -3,7 +3,7 @@
 // const prisma = new PrismaClient();
 
 // async function insertData(modelName, data) {
-//   const model = prisma[modelName.toLowerCase()];
+//   const model = prisma[modelName];
 
 //   if (!model || typeof model.createMany !== 'function') {
 //     throw new Error(`Invalid model name: ${modelName}`);
@@ -24,54 +24,179 @@
 
 // // Usage example
 // async function main() {
-//   const departments = [
+//  const gradscales=[
 //     {
-//       name: "Mathematics Department",
-//       description: "Focuses on the study of mathematical concepts, theories, and applications, promoting analytical and problem-solving skills.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "A",
+//       "minScore": 80.0,
+//       "maxScore": 100.0,
+//       "gpa": 4.0,
+//       "description": "Excellent performance",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "Science Department",
-//       description: "Covers various scientific disciplines including physics, chemistry, and biology, emphasizing experimentation and scientific reasoning.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "A-",
+//       "minScore": 75.0,
+//       "maxScore": 79.99,
+//       "gpa": 3.7,
+//       "description": "Very good performance",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "Languages Department",
-//       description: "Dedicated to the study of languages and literature, enhancing communication skills and cultural understanding.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "B+",
+//       "minScore": 70.0,
+//       "maxScore": 74.99,
+//       "gpa": 3.3,
+//       "description": "Good performance",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "Humanities Department",
-//       description: "Explores human culture, history, and philosophy, encouraging critical thinking and ethical reasoning.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "B",
+//       "minScore": 65.0,
+//       "maxScore": 69.99,
+//       "gpa": 3.0,
+//       "description": "Above average performance",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "Technical and Applied Studies Department",
-//       description: "Focuses on practical skills and technical knowledge in various fields, preparing students for careers in applied sciences and technology.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "B-",
+//       "minScore": 60.0,
+//       "maxScore": 64.99,
+//       "gpa": 2.7,
+//       "description": "Satisfactory performance",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "Physical Education Department",
-//       description: "Promotes physical fitness and healthy lifestyles through various sports and physical activities, focusing on teamwork and personal development.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "C+",
+//       "minScore": 55.0,
+//       "maxScore": 59.99,
+//       "gpa": 2.3,
+//       "description": "Average performance",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "Creative Arts Department",
-//       description: "Encourages artistic expression through visual arts, music, drama, and dance, fostering creativity and cultural appreciation.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "C",
+//       "minScore": 50.0,
+//       "maxScore": 54.99,
+//       "gpa": 2.0,
+//       "description": "Below average performance",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "ICT and Innovation Department",
-//       description: "Focuses on information and communication technology, preparing students for the digital age through coding, software development, and innovation.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "C-",
+//       "minScore": 45.0,
+//       "maxScore": 49.99,
+//       "gpa": 1.7,
+//       "description": "Slightly below average",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "Special Needs Education Department",
-//       description: "Provides specialized education and support for students with diverse learning needs, ensuring inclusivity and equal opportunities.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "D+",
+//       "minScore": 40.0,
+//       "maxScore": 44.99,
+//       "gpa": 1.3,
+//       "description": "Needs improvement",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "Early Childhood Development Education (ECDE) Department",
-//       description: "Focuses on the holistic development of young children, emphasizing foundational skills in social, emotional, and cognitive growth.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "D",
+//       "minScore": 35.0,
+//       "maxScore": 39.99,
+//       "gpa": 1.0,
+//       "description": "Poor performance",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
 //     {
-//       name: "Guidance and Counselling Department",
-//       description: "Offers support for students' personal and academic development, promoting mental health and well-being through counseling services.",
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "D-",
+//       "minScore": 30.0,
+//       "maxScore": 34.99,
+//       "gpa": 0.7,
+//       "description": "Very poor performance",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
 //     },
-//   ];
+//     {
+//       "name": "Kenyan National Scale",
+//       "letterGrade": "E",
+//       "minScore": 0.0,
+//       "maxScore": 29.99,
+//       "gpa": 0.0,
+//       "description": "Fail",
+//       "schoolId": null,
+//       "subjectId": null,
+//       "examType": null,
+//       "isDefault": true,
+//       "createdAt": "2024-01-01T00:00:00.000Z",
+//       "updatedAt": "2024-01-01T00:00:00.000Z"
+//     }
+//   ]
+  
 
-//   await insertData('Department', departments);
+//   await insertData('GradeScale', gradscales);
 // }
 
 // main()

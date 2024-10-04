@@ -22,6 +22,8 @@ import { deleteAnnouncement } from "@/actions/announcement-actions";
 import { deleteGrade } from "@/actions/grade-actions";
 import { deleteAcademicYear } from "@/actions/academic-year-actions";
 import { deleteDepartment } from "@/actions/department-actions";
+import { deleteGradeScale } from "@/actions/grade-scale-actions";
+import { deleteExamSchedule } from "@/actions/exam-schedule";
 
 const deleteActionMap = {
   subject: deleteSubject,
@@ -39,6 +41,8 @@ const deleteActionMap = {
   grade: deleteGrade,
   academicYear: deleteAcademicYear,
   department: deleteDepartment,
+  gradeScale:deleteGradeScale,
+  examSchedule:deleteExamSchedule,
 };
 
 // USE LAZY LOADING
@@ -89,6 +93,12 @@ const ExamForm = dynamic(() => import("./forms/exam-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const DepartmentForm = dynamic(() => import("./forms/department-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const GradeScaleForm = dynamic(() => import("./forms/grade-scale-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const ExamScheduleForm = dynamic(() => import("./forms/exam-schedule-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -204,6 +214,22 @@ const forms: {
 
   department: (setOpen, type, data,relatedData) => (
     <DepartmentForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  gradeScale: (setOpen, type, data,relatedData) => (
+    <GradeScaleForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  examSchedule: (setOpen, type, data,relatedData) => (
+    <ExamScheduleForm
       type={type}
       data={data}
       setOpen={setOpen}

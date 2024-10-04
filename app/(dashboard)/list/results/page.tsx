@@ -4,28 +4,28 @@ import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Prisma, Result, Student, Subject, AcademicYear, Grade, Class, ExamType } from "@prisma/client";
+import { Prisma, Result, Student, Subject, AcademicYear, Grade, Class, Exam, GradeScale } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 import ClientOnlyComponent from "@/components/client-only-component";
 
 type ResultWithIncludes = Result & {
   student: Student;
+  exam: Exam;
   subject: Subject;
   academicYear: AcademicYear;
   grade: Grade;
   class: Class | null;
+  gradeScale: GradeScale;
 };
 
-type ResultList = {
-  id: number;
+type ResultList = ResultWithIncludes & {
   studentName: string;
+  examName: string;
   subjectName: string;
-  score: number;
-  resultgrade: string | null;
+  academicYearName: string;
+  gradeName: string;
   className: string | null;
-  term: number;
-  examType: ExamType;
 };
 
 const ResultListPage = async ({
@@ -39,24 +39,28 @@ const ResultListPage = async ({
 
   const columns = [
     { header: "Student", accessor: "studentName" },
+    { header: "Exam", accessor: "examName" },
     { header: "Subject", accessor: "subjectName" },
-    { header: "Score", accessor: "score" },
-    { header: "Grade", accessor: "resultgrade" },
+    { header: "Academic Year", accessor: "academicYearName" },
+    { header: "Grade", accessor: "gradeName" },
     { header: "Class", accessor: "className" },
-    { header: "Term", accessor: "term" },
-    { header: "Exam Type", accessor: "examType" },
+    { header: "Score", accessor: "score" },
+    { header: "Result Grade", accessor: "resultGrade" },
+    { header: "Remarks", accessor: "remarks" },
     ...(role === "admin" || role === "teacher" ? [{ header: "Actions", accessor: "action" }] : []),
   ];
 
   const renderRow = (item: ResultList) => (
     <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
       <td className="p-4">{item.studentName}</td>
+      <td>{item.examName}</td>
       <td>{item.subjectName}</td>
-      <td>{item.score}</td>
-      <td>{item.resultgrade || 'N/A'}</td>
+      <td>{item.academicYearName}</td>
+      <td>{item.gradeName}</td>
       <td>{item.className || 'N/A'}</td>
-      <td>{item.term}</td>
-      <td>{item.examType}</td>
+      <td>{item.score}</td>
+      <td>{item.resultGrade || 'N/A'}</td>
+      <td>{item.remarks || 'N/A'}</td>
       <td>
         <ClientOnlyComponent>
           <div className="flex items-center gap-2">
@@ -89,6 +93,7 @@ const ResultListPage = async ({
               { student: { firstName: { contains: value, mode: "insensitive" } } },
               { student: { lastName: { contains: value, mode: "insensitive" } } },
               { subject: { name: { contains: value, mode: "insensitive" } } },
+              { exam: { title: { contains: value, mode: "insensitive" } } },
             ];
             break;
           default:
@@ -102,7 +107,6 @@ const ResultListPage = async ({
     case "admin":
       break;
     case "teacher":
-      // Adjust this based on how teachers are related to results in your schema
       query.subject = { teachers: { some: { id: currentUserId! } } };
       break;
     case "student":
@@ -120,10 +124,12 @@ const ResultListPage = async ({
       where: query,
       include: {
         student: true,
+        exam: true,
         subject: true,
         academicYear: true,
         grade: true,
         class: true,
+        gradeScale: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
@@ -132,14 +138,13 @@ const ResultListPage = async ({
   ]);
 
   const data: ResultList[] = dataRes.map((item: ResultWithIncludes) => ({
-    id: item.id,
+    ...item,
     studentName: `${item.student.firstName} ${item.student.lastName}`,
+    examName: item.exam.title,
     subjectName: item.subject.name,
-    score: item.score,
-    resultgrade: item.resultgrade,
+    academicYearName: item.academicYear.year,
+    gradeName: item.grade.levelName,
     className: item.class?.name || null,
-    term: item.term,
-    examType: item.examType,
   }));
 
   return (
