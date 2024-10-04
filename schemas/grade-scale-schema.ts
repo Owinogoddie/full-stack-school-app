@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 const ExamTypeEnum = z.enum([
   "MIDTERM",
   "END_TERM",
@@ -9,9 +10,7 @@ const ExamTypeEnum = z.enum([
   "NATIONAL",
 ]);
 
-export const gradeScaleSchema = z.object({
-  id: z.number().optional(),
-  name: z.string().min(1, { message: "Name is required" }),
+const GradeRangeSchema = z.object({
   letterGrade: z.string().min(1, { message: "Letter Grade is required" }),
   minScore: z.coerce
     .number()
@@ -36,9 +35,14 @@ export const gradeScaleSchema = z.object({
       }
     ),
   description: z.string().optional(),
+});
+
+export const gradeScaleSchema = z.object({
+  id: z.number().optional(),
+  name: z.string().min(1, { message: "Name is required" }),
+  ranges: z.array(GradeRangeSchema),
   schoolId: z.string().nullable().optional(),
-  subjectId: z.number().nullable().optional(),
-  examType: ExamTypeEnum.nullable().optional(),
+  examTypes: z.array(ExamTypeEnum),
   isDefault: z.boolean().optional(),
 });
 

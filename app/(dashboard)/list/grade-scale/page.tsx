@@ -4,13 +4,13 @@ import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { GradeScale, Prisma, School, Subject, ExamType } from "@prisma/client";
+import { GradeScale, Prisma, School, ExamType, GradeRange } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 
 type GradeScaleWithRelations = GradeScale & {
   school?: School;
-  subject?: Subject;
+  ranges: GradeRange[];
 };
 
 const GradeScaleListPage = async ({
@@ -27,31 +27,24 @@ const GradeScaleListPage = async ({
       accessor: "name",
     },
     {
-      header: "Letter Grade",
-      accessor: "letterGrade",
+      header: "Ranges",
+      accessor: "ranges",
+      cell: (item: GradeScaleWithRelations) => (
+        <div>
+          {item.ranges.map((range, index) => (
+            <div key={index} className="text-xs">
+              {range.letterGrade}: {range.minScore}-{range.maxScore}
+            </div>
+          ))}
+        </div>
+      ),
     },
     {
-      header: "Min Score",
-      accessor: "minScore",
-    },
-    {
-      header: "Max Score",
-      accessor: "maxScore",
-    },
-    {
-      header: "GPA",
-      accessor: "gpa",
-      className: "hidden md:table-cell",
-    },
-    
-    {
-      header: "Subject",
-      accessor: "subject.name",
-      className: "hidden md:table-cell",
-    },
-    {
-      header: "Exam Type",
-      accessor: "examType",
+      header: "Exam Types",
+      accessor: "examTypes",
+      cell: (item: GradeScaleWithRelations) => (
+        <div>{item.examTypes.join(", ")}</div>
+      ),
       className: "hidden md:table-cell",
     },
     ...(role === "admin"
@@ -70,12 +63,14 @@ const GradeScaleListPage = async ({
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
       <td className="p-4">{item.name}</td>
-      <td>{item.letterGrade}</td>
-      <td>{item.minScore}</td>
-      <td>{item.maxScore}</td>
-      <td className="hidden md:table-cell">{item.gpa || "N/A"}</td>
-      <td className="hidden md:table-cell">{item.subject?.name || "N/A"}</td>
-      <td className="hidden md:table-cell">{item.examType || "N/A"}</td>
+      <td>
+        {item.ranges.map((range, index) => (
+          <div key={index} className="text-xs">
+            {range.letterGrade}: {range.minScore}-{range.maxScore}
+          </div>
+        ))}
+      </td>
+      <td className="hidden md:table-cell">{item.examTypes.join(", ")}</td>
       <td>
         <div className="flex items-center gap-2">
           {role === "admin" && (
@@ -103,11 +98,8 @@ const GradeScaleListPage = async ({
           case "schoolId":
             query.schoolId = value;
             break;
-          case "subjectId":
-            query.subjectId = parseInt(value);
-            break;
           case "examType":
-            query.examType = value as ExamType;
+            query.examTypes = { has: value as ExamType };
             break;
           case "search":
             query.name = { contains: value, mode: "insensitive" };
@@ -124,7 +116,7 @@ const GradeScaleListPage = async ({
       where: query,
       include: {
         school: true,
-        subject: true,
+        ranges: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),

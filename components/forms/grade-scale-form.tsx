@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm, Controller } from "react-hook-form";
 import InputField from "../input-field";
-import SelectField from "../select-field";
+import MultiSelect from "../multi-select";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -21,27 +21,31 @@ const GradeScaleForm = ({
   type,
   data,
   setOpen,
-  relatedData,
 }: {
   type: "create" | "update";
   data?: any;
   setOpen: Dispatch<SetStateAction<boolean>>;
-  relatedData?: any;
 }) => {
   const {
     register,
+    control,
     handleSubmit,
-    setValue,
+    // setValue,
     formState: { errors, isSubmitting },
   } = useForm<GradeScaleSchema>({
     resolver: zodResolver(gradeScaleSchema),
     defaultValues: {
       ...data,
       schoolId: data?.schoolId?.toString(),
-      subjectId: data?.subjectId,
-      examType:data?.examType,
+      examTypes: data?.examTypes || [],
       isDefault: data?.isDefault || false,
+      ranges: data?.ranges || [{ letterGrade: '', minScore: 0, maxScore: 0 }],
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "ranges",
   });
 
   const router = useRouter();
@@ -76,7 +80,17 @@ const GradeScaleForm = ({
       state.messages?.forEach((message: string) => toast.error(message));
     }
   }, [state, router, type, setOpen]);
-// console.log(data)
+
+  const examTypeOptions = [
+    { id: "MIDTERM", label: "Midterm" },
+    { id: "END_TERM", label: "End Term" },
+    { id: "MOCK", label: "Mock" },
+    { id: "FINAL", label: "Final" },
+    { id: "ASSIGNMENT", label: "Assignment" },
+    { id: "QUIZ", label: "Quiz" },
+    { id: "NATIONAL", label: "National" },
+  ];
+
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
@@ -90,82 +104,20 @@ const GradeScaleForm = ({
           register={register}
           error={errors.name}
           placeholder="Enter grade scale name"
+          fullWidth
         />
-        <InputField
-          label="Letter Grade"
-          name="letterGrade"
-          register={register}
-          error={errors.letterGrade}
-          placeholder="Enter letter grade"
-        />
-        <InputField
-          label="Minimum Score"
-          name="minScore"
-          type="number"
-          register={register}
-          error={errors.minScore}
-          placeholder="Enter minimum score"
-        />
-        <InputField
-          label="Maximum Score"
-          name="maxScore"
-          type="number"
-          register={register}
-          error={errors.maxScore}
-          placeholder="Enter maximum score"
-        />
-        <InputField
-          label="GPA"
-          name="gpa"
-          type="number"
-          register={register}
-          error={errors.gpa}
-          placeholder="Enter GPA"
-        />
-        <InputField
-          label="Description"
-          name="description"
-          register={register}
-          error={errors.description}
-          placeholder="Enter description"
-        />
-        {/* <SelectField
-          label="School"
-          options={relatedData?.schools?.map((school: any) => ({
-            value: school.id,
-            label: school.name,
-          }))}
-          name="schoolId"
-          register={register}
-          setValue={setValue}
-          error={errors.schoolId}
-        /> */}
-        <SelectField
-          label="Subject"
-          options={relatedData?.subjects?.map((subject: any) => ({
-            value: subject.id,
-            label: subject.name,
-          }))}
-          name="subjectId"
-          register={register}
-          setValue={setValue}
-          error={errors.subjectId}
-        />
-        <SelectField
-          label="Exam Type"
-          options={[
-            { value: "MIDTERM", label: "Midterm" },
-            { value: "END_TERM", label: "End Term" },
-            { value: "MOCK", label: "Mock" },
-            { value: "FINAL", label: "Final" },
-            { value: "ASSIGNMENT", label: "Assignment" },
-            { value: "QUIZ", label: "Quiz" },
-            { value: "NATIONAL", label: "National" },
-          ]}
-          name="examType"
-          register={register}
-          setValue={setValue}
-          error={errors.examType}
+        <Controller
+          name="examTypes"
+          control={control}
+          render={({ field }) => (
+            <MultiSelect
+              label="Exam Types"
+              options={examTypeOptions}
+              value={field.value || []}
+              onChange={(newValue) => field.onChange(newValue)}
+              error={errors.examTypes}
+            />
+          )}
         />
         <div className="flex items-center gap-2">
           <input
@@ -177,6 +129,63 @@ const GradeScaleForm = ({
             Is Default
           </label>
         </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold mb-2">Grade Ranges</h2>
+        {fields.map((field, index) => (
+          <div key={field.id} className="flex flex-wrap gap-4 mb-4">
+            <InputField
+              label="Letter Grade"
+              name={`ranges.${index}.letterGrade`}
+              register={register}
+              error={errors.ranges?.[index]?.letterGrade}
+              placeholder="Enter letter grade"
+            />
+            <InputField
+              label="Minimum Score"
+              name={`ranges.${index}.minScore`}
+              type="number"
+              register={register}
+              error={errors.ranges?.[index]?.minScore}
+              placeholder="Enter minimum score"
+            />
+            <InputField
+              label="Maximum Score"
+              name={`ranges.${index}.maxScore`}
+              type="number"
+              register={register}
+              error={errors.ranges?.[index]?.maxScore}
+              placeholder="Enter maximum score"
+            />
+            <InputField
+              label="GPA"
+              name={`ranges.${index}.gpa`}
+              type="number"
+              register={register}
+              error={errors.ranges?.[index]?.gpa}
+              placeholder="Enter GPA"
+            />
+            <InputField
+              label="Description"
+              name={`ranges.${index}.description`}
+              register={register}
+              error={errors.ranges?.[index]?.description}
+              placeholder="Enter description"
+              fullWidth
+            />
+            <button type="button" onClick={() => remove(index)} className="bg-red-400 text-white p-2 rounded-md">
+              Remove Range
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => append({ letterGrade: '', minScore: 0, maxScore: 0 })}
+          className="bg-green-400 text-white p-2 rounded-md"
+        >
+          Add Range
+        </button>
       </div>
 
       <button

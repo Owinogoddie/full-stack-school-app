@@ -41,7 +41,6 @@ const ResultForm = ({
       examId: data?.examId,
       subjectId: data?.subjectId,
       academicYearId: data?.academicYearId,
-      gradeId: data?.gradeId,
       classId: data?.classId,
       gradeScaleId: data?.gradeScaleId,
     },
@@ -61,7 +60,7 @@ const ResultForm = ({
     } else {
       const updatedData = {
         ...formData,
-        id: data?.id || undefined, // Use undefined if id is not provided
+        id: data?.id || undefined,
       };
       responseState = await updateResult(updatedData);
     }
@@ -74,13 +73,14 @@ const ResultForm = ({
       toast.success(
         `Result has been ${type === "create" ? "created" : "updated"} successfully!`
       );
+      state.messages?.forEach((message: string) => toast.success(message));
       setOpen(false);
       router.refresh();
     } else if (state.error) {
       state.messages?.forEach((message: string) => toast.error(message));
     }
   }, [state, router, type, setOpen]);
-console.log({data})
+
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
@@ -137,18 +137,6 @@ console.log({data})
           defaultValue={data?.academicYearId}
         />
         <SelectField
-          label="Grade"
-          options={relatedData?.grades?.map((grade: any) => ({
-            value: grade.id,
-            label: grade.levelName,
-          }))}
-          name="gradeId"
-          register={register}
-          setValue={setValue}
-          error={errors.gradeId}
-          defaultValue={data?.gradeId}
-        />
-        <SelectField
           label="Class"
           options={relatedData?.classes?.map((class_: any) => ({
             value: class_.id,
@@ -180,20 +168,6 @@ console.log({data})
           setValue={setValue}
           error={errors.gradeScaleId}
           defaultValue={data?.gradeScaleId}
-        />
-        <InputField
-          label="Result Grade"
-          name="resultGrade"
-          register={register}
-          error={errors.resultGrade}
-          placeholder="Enter result grade"
-        />
-        <InputField
-          label="Remarks"
-          name="remarks"
-          register={register}
-          error={errors.remarks}
-          placeholder="Enter remarks"
         />
       </div>
 

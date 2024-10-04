@@ -25,25 +25,59 @@ const handleForeignKeyError = (field: string): string => {
   return `${entity} with the provided ID does not exist.`;
 };
 
+const getGradeInfo = async (score: number, gradeScaleId: number) => {
+  const gradeRanges = await prisma.gradeRange.findMany({
+    where: { gradeScaleId },
+    orderBy: { minScore: 'desc' },
+  });
+
+  for (const range of gradeRanges) {
+    if (score >= range.minScore && score <= range.maxScore) {
+      return {
+        resultGrade: range.letterGrade,
+        remarks: range.description || '',
+      };
+    }
+  }
+
+  return { resultGrade: 'N/A', remarks: 'Score out of range' };
+};
+
 export const createResult = async (data: ResultSchema): Promise<ResponseState> => {
   console.log("Creating result:", data);
   try {
+    const classData = await prisma.class.findUnique({
+      where: { id: data.classId },
+      include: { grade: true },
+    });
+
+    if (!classData) {
+      return { success: false, error: true, message: "Class not found" };
+    }
+
+    const { resultGrade, remarks } = await getGradeInfo(data.score, data.gradeScaleId);
+
     const result = await prisma.result.create({
       data: {
         studentId: data.studentId,
         examId: data.examId,
         subjectId: data.subjectId,
         academicYearId: data.academicYearId,
-        gradeId: data.gradeId,
+        gradeId: classData.grade.id,
         classId: data.classId,
         score: data.score,
-        gradeScaleId: data.gradeScaleId ?? 1,
-        resultGrade: data.resultGrade,
-        remarks: data.remarks,
+        gradeScaleId: data.gradeScaleId,
+        resultGrade,
+        remarks,
       },
     });
     console.log("Result created successfully:", result);
-    return { success: true, error: false, message: "Result created successfully" };
+    return { 
+      success: true, 
+      error: false, 
+      message: "Result created successfully",
+      messages: [`Grade: ${resultGrade}`, `Remarks: ${remarks}`]
+    };
   } catch (err) {
     console.error("Error in createResult:", err);
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
@@ -73,6 +107,18 @@ export const updateResult = async (data: ResultSchema): Promise<ResponseState> =
     if (!data.id) {
       throw new Error("Result ID is required for update");
     }
+
+    const classData = await prisma.class.findUnique({
+      where: { id: data.classId },
+      include: { grade: true },
+    });
+
+    if (!classData) {
+      return { success: false, error: true, message: "Class not found" };
+    }
+
+    const { resultGrade, remarks } = await getGradeInfo(data.score, data.gradeScaleId);
+
     const result = await prisma.result.update({
       where: { id: data.id },
       data: {
@@ -80,16 +126,21 @@ export const updateResult = async (data: ResultSchema): Promise<ResponseState> =
         examId: data.examId,
         subjectId: data.subjectId,
         academicYearId: data.academicYearId,
-        gradeId: data.gradeId,
+        gradeId: classData.grade.id,
         classId: data.classId,
         score: data.score,
         gradeScaleId: data.gradeScaleId,
-        resultGrade: data.resultGrade,
-        remarks: data.remarks,
+        resultGrade,
+        remarks,
       },
     });
     console.log("Result updated successfully:", result);
-    return { success: true, error: false, message: "Result updated successfully" };
+    return { 
+      success: true, 
+      error: false, 
+      message: "Result updated successfully",
+      messages: [`Grade: ${resultGrade}`, `Remarks: ${remarks}`]
+    };
   } catch (err) {
     console.error("Error in updateResult:", err);
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
@@ -115,6 +166,7 @@ export const updateResult = async (data: ResultSchema): Promise<ResponseState> =
     return { success: false, error: true, message: "Failed to update result" };
   }
 };
+
 
 export const deleteResult = async (currentState: ResponseState, formData: FormData): Promise<ResponseState> => {
   const id = formData.get('id');

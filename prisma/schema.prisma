@@ -216,7 +216,7 @@ model Subject {
   results       Result[]
   exams         Exam[]
   examSchedules ExamSchedule[]
-  gradeScale    GradeScale[]
+  // gradeScale    GradeScale[]
   learningAreas LearningArea[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -269,7 +269,7 @@ model Result {
   score          Float
   gradeScale     GradeScale   @relation(fields: [gradeScaleId], references: [id])
   gradeScaleId   Int
-  resultGrade    String? // This will be populated based on the GradeScale
+  resultGrade    String?
   remarks        String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -357,23 +357,32 @@ model ExamSchedule {
 
 model GradeScale {
   id          Int       @id @default(autoincrement())
-  name        String // e.g., "Standard Scale", "Advanced Placement Scale"
-  letterGrade String
-  minScore    Float
-  maxScore    Float
-  gpa         Float?
-  description String?
+  name        String
+  ranges      GradeRange[]
   schoolId    String?
   school      School?   @relation(fields: [schoolId], references: [id])
-  subjectId   Int? // Optional: for subject-specific scales
-  subject     Subject?  @relation(fields: [subjectId], references: [id])
-  examType    ExamType? // Optional: for exam-type specific scales
+  // subjectId   Int?
+  // subject     Subject?  @relation(fields: [subjectId], references: [id])
+  examTypes    ExamType[]
   isDefault   Boolean   @default(false)
   results     Result[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@unique([schoolId, subjectId, examType, isDefault])
+  @@unique([schoolId, isDefault])
+}
+
+model GradeRange {
+  id           Int        @id @default(autoincrement())
+  gradeScale   GradeScale @relation(fields: [gradeScaleId], references: [id])
+  gradeScaleId Int
+  letterGrade  String
+  minScore     Float
+  maxScore     Float
+  gpa          Float?
+  description  String?
+
+  @@unique([gradeScaleId, letterGrade])
 }
 
 model Attendance {
