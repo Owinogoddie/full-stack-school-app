@@ -20,13 +20,7 @@ interface SelectedParams {
   gradeScaleId: number;
 }
 
-interface BulkAddResultsPageProps {
-  relatedData: RelatedData;
-}
-
-const BulkAddResultsPage = (props: BulkAddResultsPageProps) => {
-  const { relatedData } = props; // Destructure props here
-
+export default function BulkAddResultsPage({ relatedData }: { relatedData: RelatedData }) {
   const [showModal, setShowModal] = useState(true);
   const [selectedParams, setSelectedParams] = useState<SelectedParams | null>(null);
 
@@ -48,6 +42,4 @@ const BulkAddResultsPage = (props: BulkAddResultsPageProps) => {
       ) : null}
     </div>
   );
-};
-
-export default BulkAddResultsPage;
+}
