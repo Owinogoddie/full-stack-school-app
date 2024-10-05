@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useState } from 'react';
 import BulkResultsModal from '../_components/BulkResultsModal';
@@ -24,7 +24,7 @@ interface BulkAddResultsPageProps {
   relatedData: RelatedData;
 }
 
-export default function BulkAddResultsPage({ relatedData }: BulkAddResultsPageProps) {
+const BulkAddResultsPage = ({ relatedData }: BulkAddResultsPageProps) => {
   const [showModal, setShowModal] = useState(true);
   const [selectedParams, setSelectedParams] = useState<SelectedParams | null>(null);
 
@@ -46,4 +46,6 @@ export default function BulkAddResultsPage({ relatedData }: BulkAddResultsPagePr
       ) : null}
     </div>
   );
-}
+};
+
+export default BulkAddResultsPage;
