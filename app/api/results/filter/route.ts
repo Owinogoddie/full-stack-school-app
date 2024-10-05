@@ -1,3 +1,5 @@
+// File: /app/api/results/filter/route.ts
+
 import { NextResponse } from 'next/server';
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
@@ -11,6 +13,7 @@ export async function GET(request: Request) {
     const gradeScaleId = searchParams.get('gradeScaleId');
     const search = searchParams.get('search');
     const page = searchParams.get('page');
+    const exportAll = searchParams.get('export') === 'true';
 
     const query: any = {};
 
@@ -19,7 +22,7 @@ export async function GET(request: Request) {
     if (academicYearId) query.academicYearId = parseInt(academicYearId);
     if (classId) query.classId = parseInt(classId);
     if (gradeScaleId) query.gradeScaleId = parseInt(gradeScaleId);
-  
+   
     if (search) {
       query.OR = [
         { student: { firstName: { contains: search, mode: 'insensitive' } } },
@@ -29,35 +32,37 @@ export async function GET(request: Request) {
       ];
     }
 
-  const results = await prisma.result.findMany({
-    where: query,
-    include: {
-      student: true,
-      exam: true,
-      subject: true,
-      academicYear: true,
-      grade: true,
-      class: true,
-      gradeScale: true,
-    },
-    take: ITEM_PER_PAGE,
-    skip: ITEM_PER_PAGE * (parseInt(page || '1') - 1),
-  });
+    const results = await prisma.result.findMany({
+      where: query,
+      include: {
+        student: true,
+        exam: true,
+        subject: true,
+        academicYear: true,
+        grade: true,
+        class: true,
+        gradeScale: true,
+      },
+      ...(exportAll ? {} : {
+        take: ITEM_PER_PAGE,
+        skip: ITEM_PER_PAGE * (parseInt(page || '1') - 1),
+      }),
+    });
 
-  const count = await prisma.result.count({ where: query });
+    const count = await prisma.result.count({ where: query });
 
-  const formattedResults = results.map(result => ({
-    id: result.id,
-    studentName: `${result.student.firstName} ${result.student.lastName}`,
-    examName: result.exam.title,
-    subjectName: result.subject.name,
-    academicYearName: result.academicYear.year,
-    gradeName: result.grade.levelName,
-    className: result.class?.name || 'N/A',
-    score: result.score,
-    resultGrade: result.resultGrade || 'N/A',
-    remarks: result.remarks || 'N/A',
-  }));
+    const formattedResults = results.map(result => ({
+      id: result.id,
+      studentName: `${result.student.firstName} ${result.student.lastName}`,
+      examName: result.exam.title,
+      subjectName: result.subject.name,
+      academicYearName: result.academicYear.year,
+      gradeName: result.grade.levelName,
+      className: result.class?.name || 'N/A',
+      score: result.score,
+      resultGrade: result.resultGrade || 'N/A',
+      remarks: result.remarks || 'N/A',
+    }));
 
-  return NextResponse.json({ results: formattedResults, count });
+    return NextResponse.json({ results: formattedResults, count });
 }

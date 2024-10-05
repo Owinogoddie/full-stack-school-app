@@ -99,7 +99,7 @@ export const  menuItems = [
         {
           icon: "/result.png",
           label: "Results Filter",
-          href: "/list/results/filter",
+          href: "/list/results/results/filter",
           visible: ["admin", "teacher",],
         },
         {

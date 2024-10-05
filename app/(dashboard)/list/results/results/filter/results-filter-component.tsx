@@ -1,3 +1,5 @@
+// File: components/ResultsFilterComponent.tsx
+
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
@@ -7,6 +9,8 @@ import Table from "@/components/table";
 import Pagination from "@/components/pagination";
 import Select from "react-select";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 type RelatedData = {
   exams: any[];
@@ -55,11 +59,13 @@ export function ResultsFilterComponent({
   const [count, setCount] = useState(0);
   const [page, setPage] = useState<number>(1);
   const [, setImmediateSearch] = useState("");
+  const [ranking, setRanking] = useState<'asc' | 'desc'>('desc');
+  const [stats, setStats] = useState<{ mean: number; min: number; max: number } | null>(null);
 
   const debouncedSearch = useDebounce(filters.search, 1000);
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Update page from query parameters when URL changes
+
   useEffect(() => {
     const queryPage = parseInt(searchParams.get("page") as string) || 1;
     if (queryPage !== page) {
@@ -67,14 +73,15 @@ export function ResultsFilterComponent({
     }
   }, [searchParams, page]);
 
-  const fetchResults = useCallback(async (searchTerm: string) => {
+  const fetchResults = useCallback(async (searchTerm: string, isExport = false) => {
     const hasFiltersApplied = Object.entries(filters).some(
       ([key, value]) => key !== "search" && value !== ""
     ) || searchTerm !== "";
 
-    if (!hasFiltersApplied) {
+    if (!hasFiltersApplied && !isExport) {
       setResults([]);
       setCount(0);
+      setStats(null);
       return;
     }
 
@@ -82,15 +89,33 @@ export function ResultsFilterComponent({
       Object.entries({ ...filters, search: searchTerm }).filter(([, value]) => value !== "")
     );
     queryParams.set("page", page.toString());
+    if (isExport) queryParams.set("export", "true");
 
-    // Update URL without causing a navigation
-    router.replace(`?${queryParams.toString()}`, { scroll: false });
+    if (!isExport) {
+      router.replace(`?${queryParams.toString()}`, { scroll: false });
+    }
 
     const response = await fetch(`/api/results/filter?${queryParams}`);
     const data = await response.json();
-    setResults(data.results);
+    const sortedResults = data.results.sort((a: Result, b: Result) => 
+      ranking === 'desc' ? b.score - a.score : a.score - b.score
+    );
+    setResults(sortedResults);
     setCount(data.count);
-  }, [filters, page, router]);
+
+    if (sortedResults.length > 0) {
+      const scores = sortedResults.map((r: Result) => r.score);
+      setStats({
+        mean: scores.reduce((a:any, b:any) => a + b, 0) / scores.length,
+        min: Math.min(...scores),
+        max: Math.max(...scores),
+      });
+    } else {
+      setStats(null);
+    }
+
+    return sortedResults;
+  }, [filters, page, router, ranking]);
 
   useEffect(() => {
     fetchResults(debouncedSearch);
@@ -100,12 +125,10 @@ export function ResultsFilterComponent({
     const filterName =
       name === "classes" ? "classId" : name.replace(/s$/, "Id");
     setFilters((prevFilters) => ({ ...prevFilters, [filterName]: value }));
-    setPage(1);  // Reset to first page when filter changes
+    setPage(1);
   };
-//   const handlePageChange = (newPage: number) => {
-//     setPage(newPage);
-//   };
-const handleImmediateSearch = () => {
+
+  const handleImmediateSearch = () => {
     fetchResults(filters.search);
     setImmediateSearch(filters.search);
   };
@@ -116,15 +139,51 @@ const handleImmediateSearch = () => {
     }
   };
 
+  const handleRankingChange = (selectedOption: any) => {
+    setRanking(selectedOption.value);
+  };
+
+  const exportToPDF = async () => {
+    const allResults = await fetchResults(filters.search, true);
+    
+    const doc = new jsPDF();
+    doc.text('Results', 14, 15);
+
+    if (stats) {
+      doc.setFontSize(12);
+      doc.text(`Mean: ${stats.mean.toFixed(2)}, Min: ${stats.min}, Max: ${stats.max}`, 14, 25);
+    }
+
+    const tableColumn = columns.map(col => col.header);
+    const tableRows = allResults.map((item: Result) => [
+      item.studentName,
+      item.subjectName,
+      `${item.score} (${item.resultGrade && item.resultGrade !== 'N/A' ? item.resultGrade : '-'})`,
+      item.examName,
+      item.academicYearName,
+      item.gradeName,
+      item.className,
+      item.remarks,
+    ]);
+
+    (doc as any).autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: stats ? 30 : 20,
+    });
+
+    doc.save('results.pdf');
+  };
+
   const columns = [
     { header: "Student", accessor: "studentName" },
     { header: "Subject", accessor: "subjectName" },
     { header: "Score (Grade)", accessor: "score" },
-    { header: "Exam", accessor: "examName", hiddenOnSmall: true ,className: "hidden md:table-cell"},
-    { header: "Academic Year", accessor: "academicYearName", hiddenOnSmall: true ,className: "hidden md:table-cell"},
-    { header: "Grade", accessor: "gradeName", hiddenOnSmall: true,className: "hidden md:table-cell" },
-    { header: "Class", accessor: "className", hiddenOnSmall: true ,className: "hidden md:table-cell"},
-    { header: "Remarks", accessor: "remarks", hiddenOnSmall: true ,className: "hidden md:table-cell"},
+    { header: "Exam", accessor: "examName", hiddenOnSmall: true, className: "hidden md:table-cell"},
+    { header: "Academic Year", accessor: "academicYearName", hiddenOnSmall: true, className: "hidden md:table-cell"},
+    { header: "Grade", accessor: "gradeName", hiddenOnSmall: true, className: "hidden md:table-cell" },
+    { header: "Class", accessor: "className", hiddenOnSmall: true, className: "hidden md:table-cell"},
+    { header: "Remarks", accessor: "remarks", hiddenOnSmall: true, className: "hidden md:table-cell"},
   ];
 
   const renderRow = (item: Result) => (
@@ -142,7 +201,7 @@ const handleImmediateSearch = () => {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {Object.entries(relatedData).map(([key, options]) => {
           const filterKey =
             key === "classes" ? "classId" : key.replace(/s$/, "Id");
@@ -168,6 +227,18 @@ const handleImmediateSearch = () => {
             </div>
           );
         })}
+        <div className="relative">
+          <Select
+            options={[
+              { value: 'desc', label: 'Highest to Lowest' },
+              { value: 'asc', label: 'Lowest to Highest' },
+            ]}
+            onChange={handleRankingChange}
+            placeholder="Rank by Score"
+            className="react-select-container"
+            classNamePrefix="react-select"
+          />
+        </div>
         <div className="relative flex">
           <input
             type="text"
@@ -185,7 +256,19 @@ const handleImmediateSearch = () => {
             <MagnifyingGlassIcon className="h-5 w-5" />
           </button>
         </div>
+        <button
+          onClick={exportToPDF}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Export to PDF
+        </button>
       </div>
+
+      {stats && (
+        <div className="mb-4">
+          <p>Mean: {stats.mean.toFixed(2)}, Min: {stats.min}, Max: {stats.max}</p>
+        </div>
+      )}
 
       {results.length > 0 ? (
         <>
