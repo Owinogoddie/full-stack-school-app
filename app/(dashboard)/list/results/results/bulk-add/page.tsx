@@ -24,7 +24,9 @@ interface BulkAddResultsPageProps {
   relatedData: RelatedData;
 }
 
-const BulkAddResultsPage = ({ relatedData }: BulkAddResultsPageProps) => {
+const BulkAddResultsPage = (props: BulkAddResultsPageProps) => {
+  const { relatedData } = props; // Destructure props here
+
   const [showModal, setShowModal] = useState(true);
   const [selectedParams, setSelectedParams] = useState<SelectedParams | null>(null);
 
@@ -47,4 +49,5 @@ const BulkAddResultsPage = ({ relatedData }: BulkAddResultsPageProps) => {
     </div>
   );
 };
+
 export default BulkAddResultsPage;
