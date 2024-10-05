@@ -4,10 +4,21 @@ import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Prisma, Result, Student, Subject, AcademicYear, Grade, Class, Exam, GradeScale } from "@prisma/client";
+import {
+  Prisma,
+  Result,
+  Student,
+  Subject,
+  AcademicYear,
+  Grade,
+  Class,
+  Exam,
+  GradeScale,
+} from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 import ClientOnlyComponent from "@/components/client-only-component";
+import Link from "next/link";
 
 type ResultWithIncludes = Result & {
   student: Student;
@@ -47,20 +58,25 @@ const ResultListPage = async ({
     { header: "Score", accessor: "score" },
     { header: "Result Grade", accessor: "resultGrade" },
     { header: "Remarks", accessor: "remarks" },
-    ...(role === "admin" || role === "teacher" ? [{ header: "Actions", accessor: "action" }] : []),
+    ...(role === "admin" || role === "teacher"
+      ? [{ header: "Actions", accessor: "action" }]
+      : []),
   ];
 
   const renderRow = (item: ResultList) => (
-    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
+    <tr
+      key={item.id}
+      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+    >
       <td className="p-4">{item.studentName}</td>
       <td>{item.examName}</td>
       <td>{item.subjectName}</td>
       <td>{item.academicYearName}</td>
       <td>{item.gradeName}</td>
-      <td>{item.className || 'N/A'}</td>
+      <td>{item.className || "N/A"}</td>
       <td>{item.score}</td>
-      <td>{item.resultGrade || 'N/A'}</td>
-      <td>{item.remarks || 'N/A'}</td>
+      <td>{item.resultGrade || "N/A"}</td>
+      <td>{item.remarks || "N/A"}</td>
       <td>
         <ClientOnlyComponent>
           <div className="flex items-center gap-2">
@@ -90,8 +106,14 @@ const ResultListPage = async ({
             break;
           case "search":
             query.OR = [
-              { student: { firstName: { contains: value, mode: "insensitive" } } },
-              { student: { lastName: { contains: value, mode: "insensitive" } } },
+              {
+                student: {
+                  firstName: { contains: value, mode: "insensitive" },
+                },
+              },
+              {
+                student: { lastName: { contains: value, mode: "insensitive" } },
+              },
               { subject: { name: { contains: value, mode: "insensitive" } } },
               { exam: { title: { contains: value, mode: "insensitive" } } },
             ];
@@ -162,7 +184,15 @@ const ResultListPage = async ({
                 <Image src="/sort.png" alt="" width={14} height={14} />
               </button>
               {(role === "admin" || role === "teacher") && (
-                <FormContainer table="result" type="create" />
+                <>
+                  <FormContainer table="result" type="create" />
+                  <Link
+                    href="/list/results/results/bulk-add"
+                    className="px-4 py-2 bg-lamaBlue text-blue-500 rounded-md hover:bg-lamaBlue-dark"
+                  >
+                    Bulk Add
+                  </Link>
+                </>
               )}
             </div>
           </div>
