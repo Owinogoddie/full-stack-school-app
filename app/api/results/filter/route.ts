@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const subjectId = searchParams.get('subjectId');
     const academicYearId = searchParams.get('academicYearId');
     const classId = searchParams.get('classId');
-    const gradeScaleId = searchParams.get('gradeScaleId');
+    const gradeId = searchParams.get('gradeId');  // Changed from gradeScaleId
     const search = searchParams.get('search');
     const page = searchParams.get('page');
     const exportAll = searchParams.get('export') === 'true';
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     if (subjectId) query.subjectId = parseInt(subjectId);
     if (academicYearId) query.academicYearId = parseInt(academicYearId);
     if (classId) query.classId = parseInt(classId);
-    if (gradeScaleId) query.gradeScaleId = parseInt(gradeScaleId);
+    if (gradeId) query.gradeId = parseInt(gradeId);  // Changed from gradeScaleId
    
     if (search) {
       query.OR = [
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         academicYear: true,
         grade: true,
         class: true,
-        gradeScale: true,
+        // Removed gradeScale from include
       },
       ...(exportAll ? {} : {
         take: ITEM_PER_PAGE,

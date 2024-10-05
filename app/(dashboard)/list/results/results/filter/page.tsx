@@ -16,7 +16,7 @@ export default async function ResultsFilterPage() {
     prisma.subject.findMany(),
     prisma.academicYear.findMany(),
     prisma.class.findMany(),
-    prisma.gradeScale.findMany(),
+    prisma.grade.findMany(),
   ]);
 
   return (
@@ -29,8 +29,9 @@ export default async function ResultsFilterPage() {
             subjects: relatedData[1],
             academicYears: relatedData[2],
             classes: relatedData[3],
-            gradeScales: relatedData[4],
+            grades: relatedData[4],
           }}
+          schoolName="Your School Name Here"
         />
       </Suspense>
     </div>

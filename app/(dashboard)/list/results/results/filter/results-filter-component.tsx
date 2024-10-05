@@ -1,23 +1,23 @@
 // File: components/ResultsFilterComponent.tsx
 
-'use client';
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
 import Table from "@/components/table";
 import Pagination from "@/components/pagination";
 import Select from "react-select";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 type RelatedData = {
   exams: any[];
   subjects: any[];
   academicYears: any[];
   classes: any[];
-  gradeScales: any[];
+  grades: any[];
 };
 
 type Filters = {
@@ -25,7 +25,7 @@ type Filters = {
   subjectId: string;
   academicYearId: string;
   classId: string;
-  gradeScaleId: string;
+  gradeId: string;
   search: string;
 };
 
@@ -44,23 +44,29 @@ type Result = {
 
 export function ResultsFilterComponent({
   relatedData,
+  schoolName,
 }: {
   relatedData: RelatedData;
+  schoolName: string;
 }) {
   const [filters, setFilters] = useState<Filters>({
     examId: "",
     subjectId: "",
     academicYearId: "",
     classId: "",
-    gradeScaleId: "",
+    gradeId: "",
     search: "",
   });
   const [results, setResults] = useState<Result[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState<number>(1);
   const [, setImmediateSearch] = useState("");
-  const [ranking, setRanking] = useState<'asc' | 'desc'>('desc');
-  const [stats, setStats] = useState<{ mean: number; min: number; max: number } | null>(null);
+  const [ranking, setRanking] = useState<"asc" | "desc">("desc");
+  const [stats, setStats] = useState<{
+    mean: number;
+    min: number;
+    max: number;
+  } | null>(null);
 
   const debouncedSearch = useDebounce(filters.search, 1000);
   const router = useRouter();
@@ -73,49 +79,58 @@ export function ResultsFilterComponent({
     }
   }, [searchParams, page]);
 
-  const fetchResults = useCallback(async (searchTerm: string, isExport = false) => {
-    const hasFiltersApplied = Object.entries(filters).some(
-      ([key, value]) => key !== "search" && value !== ""
-    ) || searchTerm !== "";
+  const fetchResults = useCallback(
+    async (searchTerm: string, isExport = false) => {
+      const hasFiltersApplied =
+        Object.entries(filters).some(
+          ([key, value]) => key !== "search" && value !== ""
+        ) || searchTerm !== "";
 
-    if (!hasFiltersApplied && !isExport) {
-      setResults([]);
-      setCount(0);
-      setStats(null);
-      return;
-    }
+      if (!hasFiltersApplied && !isExport) {
+        setResults([]);
+        setCount(0);
+        setStats(null);
+        return;
+      }
 
-    const queryParams = new URLSearchParams(
-      Object.entries({ ...filters, search: searchTerm }).filter(([, value]) => value !== "")
-    );
-    queryParams.set("page", page.toString());
-    if (isExport) queryParams.set("export", "true");
+      const queryParams = new URLSearchParams(
+        Object.entries({ ...filters, search: searchTerm }).filter(
+          ([, value]) => value !== ""
+        )
+      );
+      queryParams.set("page", page.toString());
+      if (isExport) queryParams.set("export", "true");
 
-    if (!isExport) {
-      router.replace(`?${queryParams.toString()}`, { scroll: false });
-    }
+      if (!isExport) {
+        router.replace(`?${queryParams.toString()}`, { scroll: false });
+      }
 
-    const response = await fetch(`/api/results/filter?${queryParams}`);
-    const data = await response.json();
-    const sortedResults = data.results.sort((a: Result, b: Result) => 
-      ranking === 'desc' ? b.score - a.score : a.score - b.score
-    );
-    setResults(sortedResults);
-    setCount(data.count);
+      const response = await fetch(`/api/results/filter?${queryParams}`);
+      const data = await response.json();
+      const sortedResults = data.results.sort((a: Result, b: Result) =>
+        ranking === "desc" ? b.score - a.score : a.score - b.score
+      );
 
-    if (sortedResults.length > 0) {
-      const scores = sortedResults.map((r: Result) => r.score);
-      setStats({
-        mean: scores.reduce((a:any, b:any) => a + b, 0) / scores.length,
-        min: Math.min(...scores),
-        max: Math.max(...scores),
-      });
-    } else {
-      setStats(null);
-    }
+      if (!isExport) {
+        setResults(sortedResults);
+        setCount(data.count);
 
-    return sortedResults;
-  }, [filters, page, router, ranking]);
+        if (sortedResults.length > 0) {
+          const scores = sortedResults.map((r: Result) => r.score);
+          setStats({
+            mean: scores.reduce((a: any, b: any) => a + b, 0) / scores.length,
+            min: Math.min(...scores),
+            max: Math.max(...scores),
+          });
+        } else {
+          setStats(null);
+        }
+      }
+
+      return sortedResults;
+    },
+    [filters, page, router, ranking]
+  );
 
   useEffect(() => {
     fetchResults(debouncedSearch);
@@ -125,7 +140,10 @@ export function ResultsFilterComponent({
     const filterName =
       name === "classes" ? "classId" : name.replace(/s$/, "Id");
     setFilters((prevFilters) => ({ ...prevFilters, [filterName]: value }));
-    setPage(1);
+    // Only reset page if it's not an export action
+    if (name !== "export") {
+      setPage(1);
+    }
   };
 
   const handleImmediateSearch = () => {
@@ -134,7 +152,7 @@ export function ResultsFilterComponent({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleImmediateSearch();
     }
   };
@@ -143,22 +161,120 @@ export function ResultsFilterComponent({
     setRanking(selectedOption.value);
   };
 
-  const exportToPDF = async () => {
-    const allResults = await fetchResults(filters.search, true);
-    
-    const doc = new jsPDF();
-    doc.text('Results', 14, 15);
+  const fetchAllResultsForExport = async () => {
+    const queryParams = new URLSearchParams(
+      Object.entries({ ...filters, search: filters.search }).filter(
+        ([, value]) => value !== ""
+      )
+    );
+    queryParams.set("export", "true");
 
+    const response = await fetch(`/api/results/filter?${queryParams}`);
+    const data = await response.json();
+    return data.results;
+  };
+
+  const exportToPDF = async () => {
+    const allResults = await fetchAllResultsForExport();
+
+    const doc = new jsPDF();
+
+    // Add logo
+    const logoImg = new Image();
+    logoImg.src = "/logo.png"; // Ensure this path is correct
+    doc.addImage(logoImg, "PNG", 14, 10, 20, 20); // Smaller logo
+
+    // Add school name
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text(schoolName, 40, 25);
+
+    // Add title
+    doc.setFontSize(18);
+    doc.setTextColor(0, 102, 204); // Blue color
+    doc.text("Student Results Report", 14, 40);
+
+    // Add border
+    doc.setDrawColor(0, 102, 204); // Blue color
+    doc.setLineWidth(0.5);
+    doc.rect(
+      5,
+      5,
+      doc.internal.pageSize.width - 10,
+      doc.internal.pageSize.height - 10
+    );
+
+    // Add filters used
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "normal");
+    let yPos = 50;
+    const addFilterInfo = (label: string, value: string) => {
+      if (value) {
+        doc.setFont("helvetica", "bold");
+        doc.text(`${label}:`, 14, yPos);
+        doc.setFont("helvetica", "normal");
+        doc.text(value, 45, yPos);
+        yPos += 6;
+      }
+    };
+
+    addFilterInfo(
+      "Class",
+      relatedData.classes.find((c) => c.id.toString() === filters.classId)
+        ?.name || ""
+    );
+    addFilterInfo(
+      "Academic Year",
+      relatedData.academicYears.find(
+        (ay) => ay.id.toString() === filters.academicYearId
+      )?.year || ""
+    );
+    addFilterInfo(
+      "Subject",
+      relatedData.subjects.find((s) => s.id.toString() === filters.subjectId)
+        ?.name || ""
+    );
+    addFilterInfo(
+      "Exam",
+      relatedData.exams.find((e) => e.id.toString() === filters.examId)
+        ?.title || ""
+    );
+    addFilterInfo(
+      "Grade",
+      relatedData.grades.find((g) => g.id.toString() === filters.gradeId)
+        ?.levelName || ""
+    );
+
+    // Add stats
     if (stats) {
+      yPos += 5;
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
-      doc.text(`Mean: ${stats.mean.toFixed(2)}, Min: ${stats.min}, Max: ${stats.max}`, 14, 25);
+      doc.setTextColor(0, 102, 204); // Blue color
+      doc.text(`Statistics:`, 14, yPos);
+      yPos += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0);
+      doc.setFontSize(11);
+      doc.text(
+        `Mean: ${stats.mean.toFixed(2)}   Min: ${stats.min}   Max: ${
+          stats.max
+        }`,
+        14,
+        yPos
+      );
     }
 
-    const tableColumn = columns.map(col => col.header);
-    const tableRows = allResults.map((item: Result) => [
+    // Add results table
+    const tableColumn = ["#", ...columns.map((col) => col.header)];
+    const tableRows = allResults.map((item: Result, index: number) => [
+      index + 1,
       item.studentName,
       item.subjectName,
-      `${item.score} (${item.resultGrade && item.resultGrade !== 'N/A' ? item.resultGrade : '-'})`,
+      `${item.score} (${
+        item.resultGrade && item.resultGrade !== "N/A" ? item.resultGrade : "-"
+      })`,
       item.examName,
       item.academicYearName,
       item.gradeName,
@@ -169,28 +285,93 @@ export function ResultsFilterComponent({
     (doc as any).autoTable({
       head: [tableColumn],
       body: tableRows,
-      startY: stats ? 30 : 20,
+      startY: yPos + 10,
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: {
+        0: { cellWidth: 10 }, // # column
+        1: { cellWidth: 30 }, // Student Name
+        2: { cellWidth: 25 }, // Subject
+        3: { cellWidth: 20 }, // Score (Grade)
+        4: { cellWidth: 25 }, // Exam
+        5: { cellWidth: 20 }, // Academic Year
+        6: { cellWidth: 15 }, // Grade
+        7: { cellWidth: 15 }, // Class
+        8: { cellWidth: "auto" }, // Remarks
+      },
+      headStyles: { fillColor: [0, 102, 204], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      tableLineColor: [200, 200, 200],
+      tableLineWidth: 0.1,
     });
 
-    doc.save('results.pdf');
-  };
+    // Add footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      (doc as any).setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.width / 2,
+        doc.internal.pageSize.height - 10,
+        { align: "center" } as any
+      );
+      doc.text(
+        `Generated on ${new Date().toLocaleString()}`,
+        14,
+        doc.internal.pageSize.height - 10
+      );
+    }
 
+    doc.save("student_results_report.pdf");
+  };
   const columns = [
     { header: "Student", accessor: "studentName" },
     { header: "Subject", accessor: "subjectName" },
     { header: "Score (Grade)", accessor: "score" },
-    { header: "Exam", accessor: "examName", hiddenOnSmall: true, className: "hidden md:table-cell"},
-    { header: "Academic Year", accessor: "academicYearName", hiddenOnSmall: true, className: "hidden md:table-cell"},
-    { header: "Grade", accessor: "gradeName", hiddenOnSmall: true, className: "hidden md:table-cell" },
-    { header: "Class", accessor: "className", hiddenOnSmall: true, className: "hidden md:table-cell"},
-    { header: "Remarks", accessor: "remarks", hiddenOnSmall: true, className: "hidden md:table-cell"},
+    {
+      header: "Exam",
+      accessor: "examName",
+      hiddenOnSmall: true,
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Academic Year",
+      accessor: "academicYearName",
+      hiddenOnSmall: true,
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Grade",
+      accessor: "gradeName",
+      hiddenOnSmall: true,
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Class",
+      accessor: "className",
+      hiddenOnSmall: true,
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Remarks",
+      accessor: "remarks",
+      hiddenOnSmall: true,
+      className: "hidden md:table-cell",
+    },
   ];
 
   const renderRow = (item: Result) => (
     <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-100">
       <td className="p-2">{item.studentName}</td>
       <td className="p-2">{item.subjectName}</td>
-      <td className="p-2">{item.score} ({item.resultGrade && item.resultGrade !== 'N/A' ? item.resultGrade : '-'})</td>
+      <td className="p-2">
+        {item.score} (
+        {item.resultGrade && item.resultGrade !== "N/A"
+          ? item.resultGrade
+          : "-"}
+        )
+      </td>
       <td className="p-2 hidden md:table-cell">{item.examName}</td>
       <td className="p-2 hidden md:table-cell">{item.academicYearName}</td>
       <td className="p-2 hidden md:table-cell">{item.gradeName}</td>
@@ -202,7 +383,7 @@ export function ResultsFilterComponent({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {Object.entries(relatedData).map(([key, options]) => {
+      {Object.entries(relatedData).map(([key, options]) => {
           const filterKey =
             key === "classes" ? "classId" : key.replace(/s$/, "Id");
 
@@ -211,7 +392,7 @@ export function ResultsFilterComponent({
               <Select
                 options={options.map((option: any) => ({
                   value: option.id.toString(),
-                  label: option.title || option.name || option.year,
+                  label: option.title || option.name || option.year || option.levelName,  // Added levelName for grades
                 }))}
                 onChange={(selectedOption: any) =>
                   handleFilterChange(
@@ -230,8 +411,8 @@ export function ResultsFilterComponent({
         <div className="relative">
           <Select
             options={[
-              { value: 'desc', label: 'Highest to Lowest' },
-              { value: 'asc', label: 'Lowest to Highest' },
+              { value: "desc", label: "Highest to Lowest" },
+              { value: "asc", label: "Lowest to Highest" },
             ]}
             onChange={handleRankingChange}
             placeholder="Rank by Score"
@@ -266,7 +447,9 @@ export function ResultsFilterComponent({
 
       {stats && (
         <div className="mb-4">
-          <p>Mean: {stats.mean.toFixed(2)}, Min: {stats.min}, Max: {stats.max}</p>
+          <p>
+            Mean: {stats.mean.toFixed(2)}, Min: {stats.min}, Max: {stats.max}
+          </p>
         </div>
       )}
 
