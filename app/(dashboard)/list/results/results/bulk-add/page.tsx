@@ -47,5 +47,4 @@ const BulkAddResultsPage = ({ relatedData }: BulkAddResultsPageProps) => {
     </div>
   );
 };
-
 export default BulkAddResultsPage;
