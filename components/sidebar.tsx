@@ -1,183 +1,109 @@
+'use client'
 
-import { currentUser } from "@clerk/nextjs/server";
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import { menuItems } from "@/lib/menu-items";
 import Image from "next/image";
 import Link from "next/link";
-const menuItems = [
-  {
-    title: "MENU",
-    items: [
-      {
-        icon: "/home.png",
-        label: "Home",
-        href: "/",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/calendar.png",
-        label: "Academic Years",
-        href: "/list/academic-year",
-        visible: ["admin"],
-      },
-      {
-        icon: "/subject.png",
-        label: "Departments",
-        href: "/list/departments",
-        visible: ["admin"],
-      },
-      {
-        icon: "/class.png",
-        label: "Grades",
-        href: "/list/grades",
-        visible: ["admin", "teacher"],
-      },
-      {
-        icon: "/class.png",
-        label: "Classes",
-        href: "/list/classes",
-        visible: ["admin", "teacher"],
-      },
-      
-      {
-        icon: "/teacher.png",
-        label: "Teachers",
-        href: "/list/teachers",
-        visible: ["admin", "teacher"],
-      },
-      {
-        icon: "/parent.png",
-        label: "Parents",
-        href: "/list/parents",
-        visible: ["admin", "teacher"],
-      },
-      {
-        icon: "/student.png",
-        label: "Students",
-        href: "/list/students",
-        visible: ["admin", "teacher"],
-      },
-     
-      {
-        icon: "/subject.png",
-        label: "Subjects",
-        href: "/list/subjects",
-        visible: ["admin"],
-      },
-      
-      {
-        icon: "/lesson.png",
-        label: "Lessons",
-        href: "/list/lessons",
-        visible: ["admin", "teacher"],
-      },
-      {
-        icon: "/exam.png",
-        label: "Grade Scale",
-        href: "/list/grade-scale",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/exam.png",
-        label: "Exams Schedules",
-        href: "/list/exam-schedule",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-     
-      {
-        icon: "/exam.png",
-        label: "Exams",
-        href: "/list/exams",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/assignment.png",
-        label: "Assignments",
-        href: "/list/assignments",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/result.png",
-        label: "Results",
-        href: "/list/results",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/attendance.png",
-        label: "Attendance",
-        href: "/list/attendance",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/calendar.png",
-        label: "Events",
-        href: "/list/events",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/message.png",
-        label: "Messages",
-        href: "/list/messages",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/announcement.png",
-        label: "Announcements",
-        href: "/list/announcements",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-    ],
-  },
-  {
-    title: "OTHER",
-    items: [
-      {
-        icon: "/profile.png",
-        label: "Profile",
-        href: "/profile",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/setting.png",
-        label: "Settings",
-        href: "/settings",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-      {
-        icon: "/logout.png",
-        label: "Logout",
-        href: "/logout",
-        visible: ["admin", "teacher", "student", "parent"],
-      },
-    ],
-  },
-];
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 
-const Menu = async () => {
-  const user = await currentUser();
+const Menu = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const { user } = useUser();
   const role = user?.publicMetadata.role as string;
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   return (
-    <div className="mt-4 text-sm">
-      {menuItems.map((i) => (
-        <div className="flex flex-col gap-2" key={i.title}>
-          <span className="hidden lg:block text-gray-400 font-light my-4">
-            {i.title}
-          </span>
-          {i.items.map((item) => {
-            if (item.visible.includes(role)) {
-              return (
-                <Link
-                  href={item.href}
-                  key={item.label}
-                  className="flex items-center justify-center lg:justify-start gap-4 text-gray-500 py-2 md:px-2 rounded-md hover:bg-lamaSkyLight"
-                >
-                  <Image src={item.icon} alt="" width={20} height={20} />
-                  <span className="hidden lg:block">{item.label}</span>
-                </Link>
-              );
-            }
-          })}
+    <>
+      {/* Menu icon for small devices */}
+      <button
+        className="fixed top-14 left-4 z-50 mb-10 lg:hidden"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {
+          !isOpen && <Bars3Icon className="h-8 w-8 text-gray-500 font-bold" />
+        }
+        
+      </button>
+
+      {/* Modal sidebar for small devices */}
+      <div 
+        className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ease-in-out ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)}></div>
+        <div 
+          className={`fixed top-0 left-0 bottom-0 w-64 bg-white shadow-lg transition-transform duration-300 ease-in-out ${
+            isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="p-4 h-full overflow-y-auto custom-scrollbar">
+            <button
+              className="absolute top-4 right-4"
+              onClick={() => setIsOpen(false)}
+            >
+              <XMarkIcon className="h-6 w-6 text-gray-500" />
+            </button>
+            {menuItems.map((section) => (
+              <div key={section.title} className="mb-6 mt-10">
+                <h3 className="text-gray-400 font-light mb-2">{section.title}</h3>
+                {section.items.map((item) => {
+                  if (item.visible.includes(role)) {
+                    return (
+                      <Link
+                        href={item.href}
+                        key={item.label}
+                        className="flex items-center gap-4 text-gray-500 py-2 hover:bg-lamaSkyLight"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Image src={item.icon} alt="" width={20} height={20} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  }
+                })}
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
-    </div>
+      </div>
+
+      {/* Original sidebar for large devices and icon-only for small devices */}
+      <div className="mt-10 text-sm h-[calc(100vh-var(--navbar-height,60px))] overflow-y-auto custom-scrollbar">
+        {menuItems.map((section) => (
+          <div className="flex flex-col gap-2" key={section.title}>
+            <span className="hidden lg:block text-gray-400 font-light my-4">
+              {section.title}
+            </span>
+            {section.items.map((item) => {
+              if (item.visible.includes(role)) {
+                return (
+                  <Link
+                    href={item.href}
+                    key={item.label}
+                    className="flex items-center justify-center lg:justify-start gap-4 text-gray-500 py-2 md:px-2 rounded-md hover:bg-lamaSkyLight"
+                  >
+                    <Image src={item.icon} alt="" width={20} height={20} />
+                    <span className="hidden lg:block">{item.label}</span>
+                  </Link>
+                );
+              }
+            })}
+          </div>
+        ))}
+      </div>
+    </>
   );
 };
 

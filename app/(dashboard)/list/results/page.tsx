@@ -104,6 +104,12 @@ const ResultListPage = async ({
           case "studentId":
             query.studentId = value;
             break;
+          case "classId":
+            query.classId = parseInt(value);
+            break;
+          case "subjectId":
+            query.subjectId = parseInt(value);
+            break;
           case "search":
             query.OR = [
               {

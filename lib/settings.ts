@@ -1,4 +1,4 @@
-export const ITEM_PER_PAGE = 10
+export const ITEM_PER_PAGE = 2
 
 type RouteAccessMap = {
   [key: string]: string[];
