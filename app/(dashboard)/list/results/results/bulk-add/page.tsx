@@ -1,45 +1,22 @@
-'use client';
+import BulkAddResultsClient from './BulkAddResultsClient';
+import { getAcademicYears, getClasses, getExams, getGradeScales, getSubjects } from '@/actions/data-fetching';
 
-import { useState } from 'react';
-import BulkResultsModal from '../_components/BulkResultsModal';
-import BulkResultsForm from '../_components/BulkResultsForm';
+export default async function BulkAddResultsPage() {
+  const [exams, academicYears, subjects, classes, gradeScales] = await Promise.all([
+    getExams(),
+    getAcademicYears(),
+    getSubjects(),
+    getClasses(),
+    getGradeScales(),
+  ]);
 
-interface RelatedData {
-  exams: { id: number; title: string }[];
-  subjects: { id: number; name: string }[];
-  academicYears: { id: number; year: string }[];
-  classes: { id: number; name: string }[];
-  gradeScales: { id: number; name: string }[];
-}
-
-interface SelectedParams {
-  examId: number;
-  subjectId: number;
-  academicYearId: number;
-  classId: number;
-  gradeScaleId: number;
-}
-
-export default function BulkAddResultsPage({ relatedData }: { relatedData: RelatedData }) {
-  const [showModal, setShowModal] = useState(true);
-  const [selectedParams, setSelectedParams] = useState<SelectedParams | null>(null);
-
-  const handleModalSubmit = (params: SelectedParams) => {
-    setSelectedParams(params);
-    setShowModal(false);
+  const relatedData = {
+    exams,
+    academicYears,
+    subjects,
+    classes,
+    gradeScales,
   };
 
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Bulk Add Results</h1>
-      {showModal ? (
-        <BulkResultsModal
-          relatedData={relatedData}
-          onSubmit={handleModalSubmit}
-        />
-      ) : selectedParams ? (
-        <BulkResultsForm {...selectedParams} />
-      ) : null}
-    </div>
-  );
+  return <BulkAddResultsClient relatedData={relatedData} />;
 }
