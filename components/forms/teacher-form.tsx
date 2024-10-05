@@ -125,7 +125,11 @@ const TeacherForm = ({
   }, [state, router, type, setOpen]);
 
   const { subjects } = relatedData;
-
+useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log("Validation errors:", errors);
+    }
+  }, [errors]);
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
