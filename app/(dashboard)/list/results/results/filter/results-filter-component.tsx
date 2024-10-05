@@ -1,5 +1,3 @@
-// File: components/ResultsFilterComponent.tsx
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -42,6 +40,12 @@ type Result = {
   remarks: string | null;
 };
 
+const LoadingSpinner = () => (
+  <div className="flex justify-center items-center py-8">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  </div>
+);
+
 export function ResultsFilterComponent({
   relatedData,
   schoolName,
@@ -67,6 +71,8 @@ export function ResultsFilterComponent({
     min: number;
     max: number;
   } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const debouncedSearch = useDebounce(filters.search, 1000);
   const router = useRouter();
@@ -81,53 +87,60 @@ export function ResultsFilterComponent({
 
   const fetchResults = useCallback(
     async (searchTerm: string, isExport = false) => {
-      const hasFiltersApplied =
-        Object.entries(filters).some(
-          ([key, value]) => key !== "search" && value !== ""
-        ) || searchTerm !== "";
+      if (!isExport) setIsLoading(true);
+      try {
+        const hasFiltersApplied =
+          Object.entries(filters).some(
+            ([key, value]) => key !== "search" && value !== ""
+          ) || searchTerm !== "";
 
-      if (!hasFiltersApplied && !isExport) {
-        setResults([]);
-        setCount(0);
-        setStats(null);
-        return;
-      }
-
-      const queryParams = new URLSearchParams(
-        Object.entries({ ...filters, search: searchTerm }).filter(
-          ([, value]) => value !== ""
-        )
-      );
-      queryParams.set("page", page.toString());
-      if (isExport) queryParams.set("export", "true");
-
-      if (!isExport) {
-        router.replace(`?${queryParams.toString()}`, { scroll: false });
-      }
-
-      const response = await fetch(`/api/results/filter?${queryParams}`);
-      const data = await response.json();
-      const sortedResults = data.results.sort((a: Result, b: Result) =>
-        ranking === "desc" ? b.score - a.score : a.score - b.score
-      );
-
-      if (!isExport) {
-        setResults(sortedResults);
-        setCount(data.count);
-
-        if (sortedResults.length > 0) {
-          const scores = sortedResults.map((r: Result) => r.score);
-          setStats({
-            mean: scores.reduce((a: any, b: any) => a + b, 0) / scores.length,
-            min: Math.min(...scores),
-            max: Math.max(...scores),
-          });
-        } else {
+        if (!hasFiltersApplied && !isExport) {
+          setResults([]);
+          setCount(0);
           setStats(null);
+          return;
         }
-      }
 
-      return sortedResults;
+        const queryParams = new URLSearchParams(
+          Object.entries({ ...filters, search: searchTerm }).filter(
+            ([, value]) => value !== ""
+          )
+        );
+        queryParams.set("page", page.toString());
+        if (isExport) queryParams.set("export", "true");
+
+        if (!isExport) {
+          router.replace(`?${queryParams.toString()}`, { scroll: false });
+        }
+
+        const response = await fetch(`/api/results/filter?${queryParams}`);
+        const data = await response.json();
+        const sortedResults = data.results.sort((a: Result, b: Result) =>
+          ranking === "desc" ? b.score - a.score : a.score - b.score
+        );
+
+        if (!isExport) {
+          setResults(sortedResults);
+          setCount(data.count);
+
+          if (sortedResults.length > 0) {
+            const scores = sortedResults.map((r: Result) => r.score);
+            setStats({
+              mean: scores.reduce((a: any, b: any) => a + b, 0) / scores.length,
+              min: Math.min(...scores),
+              max: Math.max(...scores),
+            });
+          } else {
+            setStats(null);
+          }
+        }
+
+        return sortedResults;
+      } catch (error) {
+        console.error("Error fetching results:", error);
+      } finally {
+        if (!isExport) setIsLoading(false);
+      }
     },
     [filters, page, router, ranking]
   );
@@ -175,156 +188,186 @@ export function ResultsFilterComponent({
   };
 
   const exportToPDF = async () => {
-    const allResults = await fetchAllResultsForExport();
-
-    const doc = new jsPDF();
-
-    // Add logo
-    const logoImg = new Image();
-    logoImg.src = "/logo.png"; // Ensure this path is correct
-    doc.addImage(logoImg, "PNG", 14, 10, 20, 20); // Smaller logo
-
-    // Add school name
-    doc.setFontSize(22);
-    doc.setFont("helvetica", "bold");
-    doc.text(schoolName, 40, 25);
-
-    // Add title
-    doc.setFontSize(18);
-    doc.setTextColor(0, 102, 204); // Blue color
-    doc.text("Student Results Report", 14, 40);
-
-    // Add border
-    doc.setDrawColor(0, 102, 204); // Blue color
-    doc.setLineWidth(0.5);
-    doc.rect(
-      5,
-      5,
-      doc.internal.pageSize.width - 10,
-      doc.internal.pageSize.height - 10
-    );
-
-    // Add filters used
-    doc.setFontSize(11);
-    doc.setTextColor(0);
-    doc.setFont("helvetica", "normal");
-    let yPos = 50;
-    const addFilterInfo = (label: string, value: string) => {
-      if (value) {
-        doc.setFont("helvetica", "bold");
-        doc.text(`${label}:`, 14, yPos);
-        doc.setFont("helvetica", "normal");
-        doc.text(value, 45, yPos);
-        yPos += 6;
-      }
-    };
-
-    addFilterInfo(
-      "Class",
-      relatedData.classes.find((c) => c.id.toString() === filters.classId)
-        ?.name || ""
-    );
-    addFilterInfo(
-      "Academic Year",
-      relatedData.academicYears.find(
-        (ay) => ay.id.toString() === filters.academicYearId
-      )?.year || ""
-    );
-    addFilterInfo(
-      "Subject",
-      relatedData.subjects.find((s) => s.id.toString() === filters.subjectId)
-        ?.name || ""
-    );
-    addFilterInfo(
-      "Exam",
-      relatedData.exams.find((e) => e.id.toString() === filters.examId)
-        ?.title || ""
-    );
-    addFilterInfo(
-      "Grade",
-      relatedData.grades.find((g) => g.id.toString() === filters.gradeId)
-        ?.levelName || ""
-    );
-
-    // Add stats
-    if (stats) {
-      yPos += 5;
+    setIsExporting(true);
+    try {
+      const allResults = await fetchAllResultsForExport();
+  
+      const doc = new jsPDF();
+  
+      // Add logo and school name on the same line, centered
+      const logoImg = new Image();
+      logoImg.src = "/logo.png"; // Ensure the path is correct
+  
+      const pageWidth = doc.internal.pageSize.width;
+      const logoWidth = 10;  // Set desired logo width
+      const logoHeight = 10; // Set desired logo height
+  
+      // Set font and size for the school name
+      doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
+  
+      // Calculate the width of the school name text
+      const schoolNameWidth = doc.getTextWidth(schoolName);
+  
+      // Calculate the total width of logo + spacing + text
+      const totalContentWidth = logoWidth + 5 + schoolNameWidth;
+  
+      // Calculate starting X position to center the logo and school name
+      const startX = (pageWidth - totalContentWidth) / 2;
+  
+      // Add the logo at the calculated position
+      doc.addImage(logoImg, "PNG", startX, 10, logoWidth, logoHeight);
+  
+      // Add the school name next to the logo with some spacing
+      doc.text(schoolName, startX + logoWidth + 5, 17); // Adjust the Y position for alignment
+  
+      // Draw a horizontal line (HR) below the logo and school name
+      doc.setDrawColor(0);  // Black color for the line
+      doc.setLineWidth(0.5); // Line thickness
+      doc.line(10, 25, pageWidth - 10, 25);  // Horizontal line from left to right
+  
+      // Add title
+      doc.setFontSize(18);
       doc.setTextColor(0, 102, 204); // Blue color
-      doc.text(`Statistics:`, 14, yPos);
-      yPos += 6;
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(0);
-      doc.setFontSize(11);
-      doc.text(
-        `Mean: ${stats.mean.toFixed(2)}   Min: ${stats.min}   Max: ${
-          stats.max
-        }`,
-        14,
-        yPos
-      );
-    }
-
-    // Add results table
-    const tableColumn = ["#", ...columns.map((col) => col.header)];
-    const tableRows = allResults.map((item: Result, index: number) => [
-      index + 1,
-      item.studentName,
-      item.subjectName,
-      `${item.score} (${
-        item.resultGrade && item.resultGrade !== "N/A" ? item.resultGrade : "-"
-      })`,
-      item.examName,
-      item.academicYearName,
-      item.gradeName,
-      item.className,
-      item.remarks,
-    ]);
-
-    (doc as any).autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: yPos + 10,
-      styles: { fontSize: 8, cellPadding: 2 },
-      columnStyles: {
-        0: { cellWidth: 10 }, // # column
-        1: { cellWidth: 30 }, // Student Name
-        2: { cellWidth: 25 }, // Subject
-        3: { cellWidth: 20 }, // Score (Grade)
-        4: { cellWidth: 25 }, // Exam
-        5: { cellWidth: 20 }, // Academic Year
-        6: { cellWidth: 15 }, // Grade
-        7: { cellWidth: 15 }, // Class
-        8: { cellWidth: "auto" }, // Remarks
-      },
-      headStyles: { fillColor: [0, 102, 204], textColor: 255 },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-      tableLineColor: [200, 200, 200],
-      tableLineWidth: 0.1,
-    });
-
-    // Add footer
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      (doc as any).setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(100);
-      doc.text(
-        `Page ${i} of ${pageCount}`,
-        doc.internal.pageSize.width / 2,
-        doc.internal.pageSize.height - 10,
-        { align: "center" } as any
-      );
-      doc.text(
-        `Generated on ${new Date().toLocaleString()}`,
-        14,
+      doc.text("Student Results Report", 14, 40);
+  
+      // Add border
+      doc.setDrawColor(0, 102, 204); // Blue color
+      doc.setLineWidth(0.5);
+      doc.rect(
+        5,
+        5,
+        doc.internal.pageSize.width - 10,
         doc.internal.pageSize.height - 10
       );
+  
+      // Add filters used
+      doc.setFontSize(11);
+      doc.setTextColor(0);
+      doc.setFont("helvetica", "normal");
+      let yPos = 50;
+      const addFilterInfo = (label: string, value: string) => {
+        if (value) {
+          doc.setFont("helvetica", "bold");
+          doc.text(`${label}:`, 14, yPos);
+          doc.setFont("helvetica", "normal");
+          doc.text(value, 45, yPos);
+          yPos += 6;
+        }
+      };
+  
+      addFilterInfo(
+        "Class",
+        relatedData.classes.find((c) => c.id.toString() === filters.classId)
+          ?.name || ""
+      );
+      addFilterInfo(
+        "Academic Year",
+        relatedData.academicYears.find(
+          (ay) => ay.id.toString() === filters.academicYearId
+        )?.year || ""
+      );
+      addFilterInfo(
+        "Subject",
+        relatedData.subjects.find((s) => s.id.toString() === filters.subjectId)
+          ?.name || ""
+      );
+      addFilterInfo(
+        "Exam",
+        relatedData.exams.find((e) => e.id.toString() === filters.examId)
+          ?.title || ""
+      );
+      addFilterInfo(
+        "Grade",
+        relatedData.grades.find((g) => g.id.toString() === filters.gradeId)
+          ?.levelName || ""
+      );
+  
+      // Add stats
+      if (stats) {
+        yPos += 5;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(0, 102, 204); // Blue color
+        doc.text(`Statistics:`, 14, yPos);
+        yPos += 6;
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(0);
+        doc.setFontSize(11);
+        doc.text(
+          `Mean: ${stats.mean.toFixed(2)}   Min: ${stats.min}   Max: ${stats.max}`,
+          14,
+          yPos
+        );
+      }
+  
+      // Add results table
+      const tableColumn = ["#", ...columns.map((col) => col.header)];
+      const tableRows = allResults.map((item: Result, index: number) => [
+        index + 1,
+        item.studentName,
+        item.subjectName,
+        `${item.score} (${
+          item.resultGrade && item.resultGrade !== "N/A"
+            ? item.resultGrade
+            : "-"
+        })`,
+        item.examName,
+        item.academicYearName,
+        item.gradeName,
+        item.className,
+        item.remarks,
+      ]);
+  
+      (doc as any).autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: yPos + 10,
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: {
+          0: { cellWidth: 10 }, // # column
+          1: { cellWidth: 30 }, // Student Name
+          2: { cellWidth: 25 }, // Subject
+          3: { cellWidth: 20 }, // Score (Grade)
+          4: { cellWidth: 25 }, // Exam
+          5: { cellWidth: 20 }, // Academic Year
+          6: { cellWidth: 15 }, // Grade
+          7: { cellWidth: 15 }, // Class
+          8: { cellWidth: "auto" }, // Remarks
+        },
+        headStyles: { fillColor: [0, 102, 204], textColor: 255 },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        tableLineColor: [200, 200, 200],
+        tableLineWidth: 0.1,
+      });
+  
+      // Add footer
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        (doc as any).setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(100);
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          doc.internal.pageSize.width / 2,
+          doc.internal.pageSize.height - 10,
+          { align: "center" } as any
+        );
+        doc.text(
+          `Generated on ${new Date().toLocaleString()}`,
+          14,
+          doc.internal.pageSize.height - 10
+        );
+      }
+  
+      doc.save("student_results_report.pdf");
+    } catch (error) {
+      console.error("Error exporting to PDF:", error);
+    } finally {
+      setIsExporting(false);
     }
-
-    doc.save("student_results_report.pdf");
   };
+  
   const columns = [
     { header: "Student", accessor: "studentName" },
     { header: "Subject", accessor: "subjectName" },
@@ -383,7 +426,7 @@ export function ResultsFilterComponent({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      {Object.entries(relatedData).map(([key, options]) => {
+        {Object.entries(relatedData).map(([key, options]) => {
           const filterKey =
             key === "classes" ? "classId" : key.replace(/s$/, "Id");
 
@@ -392,7 +435,11 @@ export function ResultsFilterComponent({
               <Select
                 options={options.map((option: any) => ({
                   value: option.id.toString(),
-                  label: option.title || option.name || option.year || option.levelName,  // Added levelName for grades
+                  label:
+                    option.title ||
+                    option.name ||
+                    option.year ||
+                    option.levelName,
                 }))}
                 onChange={(selectedOption: any) =>
                   handleFilterChange(
@@ -416,55 +463,57 @@ export function ResultsFilterComponent({
             ]}
             onChange={handleRankingChange}
             placeholder="Rank by Score"
-            className="react-select-container"
-            classNamePrefix="react-select"
-          />
-        </div>
-        <div className="relative flex">
-          <input
-            type="text"
-            name="search"
-            placeholder="Search..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange("search", e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="block w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 rounded-l leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-          />
+            className="react-select-container"classNamePrefix="react-select"
+            />
+          </div>
+          <div className="relative flex">
+            <input
+              type="text"
+              name="search"
+              placeholder="Search..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange("search", e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="block w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 rounded-l leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+            />
+            <button
+              onClick={handleImmediateSearch}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r"
+            >
+              <MagnifyingGlassIcon className="h-5 w-5" />
+            </button>
+          </div>
           <button
-            onClick={handleImmediateSearch}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r"
+            onClick={exportToPDF}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+            disabled={isExporting}
           >
-            <MagnifyingGlassIcon className="h-5 w-5" />
+            {isExporting ? 'Exporting...' : 'Export to PDF'}
           </button>
         </div>
-        <button
-          onClick={exportToPDF}
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Export to PDF
-        </button>
-      </div>
-
-      {stats && (
-        <div className="mb-4">
-          <p>
-            Mean: {stats.mean.toFixed(2)}, Min: {stats.min}, Max: {stats.max}
-          </p>
-        </div>
-      )}
-
-      {results.length > 0 ? (
-        <>
-          <Table columns={columns} renderRow={renderRow} data={results} />
-          <Pagination page={page} count={count} />
-        </>
-      ) : (
-        <div className="text-center py-8">
-          <p className="text-xl text-gray-600">
-            No results found. Please adjust your filters.
-          </p>
-        </div>
-      )}
-    </>
-  );
-}
+  
+        {stats && (
+          <div className="mb-4">
+            <p>
+              Mean: {stats.mean.toFixed(2)}, Min: {stats.min}, Max: {stats.max}
+            </p>
+          </div>
+        )}
+  
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : results.length > 0 ? (
+          <>
+            <Table columns={columns} renderRow={renderRow} data={results} />
+            <Pagination page={page} count={count} />
+          </>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-xl text-gray-600">
+              No results found. Please adjust your filters.
+            </p>
+          </div>
+        )}
+      </>
+    );
+  }

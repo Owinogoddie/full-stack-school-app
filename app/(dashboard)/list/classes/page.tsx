@@ -7,6 +7,7 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Class, Prisma, Teacher, Grade } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
+import ClientOnlyComponent from "@/components/client-only-component";
 
 type ClassWithRelations = Class & { 
   supervisor: Teacher;
@@ -67,6 +68,7 @@ const ClassListPage = async ({
       </td>
       }
       <td>
+      <ClientOnlyComponent>
         <div className="flex items-center gap-2">
           {role === "admin" && (
             <>
@@ -75,6 +77,7 @@ const ClassListPage = async ({
             </>
           )}
         </div>
+        </ClientOnlyComponent>
       </td>
     </tr>
   );
@@ -124,6 +127,7 @@ const ClassListPage = async ({
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Classes</h1>
+        <ClientOnlyComponent>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
@@ -136,9 +140,12 @@ const ClassListPage = async ({
             {role === "admin" && <FormContainer table="class" type="create" />}
           </div>
         </div>
+        </ClientOnlyComponent>
       </div>
       {/* LIST */}
+      <ClientOnlyComponent>
       <Table columns={columns} renderRow={renderRow} data={data} />
+      </ClientOnlyComponent>
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>

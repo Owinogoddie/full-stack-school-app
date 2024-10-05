@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { ResultsFilterComponent } from './results-filter-component';
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
+import FullScreenLoader from '@/components/full-screen-loader';
 
 export default async function ResultsFilterPage() {
   const {  sessionClaims } = auth();
@@ -22,7 +23,7 @@ export default async function ResultsFilterPage() {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-6">Results Filter</h1>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<div><FullScreenLoader/></div>}>
         <ResultsFilterComponent
           relatedData={{
             exams: relatedData[0],
@@ -31,7 +32,7 @@ export default async function ResultsFilterPage() {
             classes: relatedData[3],
             grades: relatedData[4],
           }}
-          schoolName="Your School Name Here"
+          schoolName="X-Academy"
         />
       </Suspense>
     </div>

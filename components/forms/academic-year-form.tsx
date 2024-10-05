@@ -1,3 +1,5 @@
+"use client";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import InputField from "../input-field";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
@@ -11,6 +13,7 @@ type ResponseState = {
   success: boolean;
   error: boolean;
   message?: string;
+  messages?: string[];
 };
 
 const AcademicYearForm = ({
@@ -43,7 +46,6 @@ const AcademicYearForm = ({
   const onSubmit = handleSubmit(async (formData) => {
     let responseState: ResponseState;
     if (type === "create") {
-      console.log(formData)
       responseState = await createAcademicYear(formData);
     } else {
       responseState = await updateAcademicYear(formData);
@@ -61,7 +63,11 @@ const AcademicYearForm = ({
       setOpen(false);
       router.refresh();
     } else if (state.error) {
-      toast.error(state.message || "Something went wrong!");
+      if (state.messages && state.messages.length) {
+        state.messages.forEach((message: string) => toast.error(message));
+      } else {
+        toast.error(state.message || "Something went wrong!");
+      }
     }
   }, [state, router, type, setOpen]);
 
@@ -76,7 +82,7 @@ const AcademicYearForm = ({
         name="year"
         register={register}
         error={errors.year}
-        placeholder=" e.g., 2023-2024"
+        placeholder="e.g., 2023-2024"
         fullWidth
       />
       <InputField
@@ -96,12 +102,62 @@ const AcademicYearForm = ({
         fullWidth
       />
 
+      {/* Checkbox for currentAcademicYear */}
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          {...register("currentAcademicYear")}
+          id="currentAcademicYear"
+        />
+        <label htmlFor="currentAcademicYear">Current Academic Year</label>
+      </div>
+
+      {data && (
+        <InputField
+          label="Id"
+          name="id"
+          defaultValue={data?.id}
+          register={register}
+          error={errors?.id}
+          hidden
+        />
+      )}
+
+      {/* Error Display */}
+      {state.error && (
+        <div className="mt-4 p-4 border border-red-300 rounded-md bg-red-50">
+          <h2 className="text-red-600 font-semibold">Error:</h2>
+          {state.messages ? (
+            <ul className="list-disc list-inside text-red-500">
+              {state.messages.map((message, index) => (
+                <li key={index} className="text-sm">
+                  {message}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="text-sm">
+              {state.message || "Something went wrong!"}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Submission Button */}
       <button
         type="submit"
-        className="bg-blue-400 text-white p-2 rounded-md"
+        className="bg-blue-400 text-white p-2 rounded-md relative"
         disabled={isSubmitting}
       >
-        {isSubmitting ? "Submitting..." : type === "create" ? "Create" : "Update"}
+        {isSubmitting ? (
+          <div className="flex items-center justify-center">
+            <div className="w-5 h-5 border-t-2 border-white border-solid rounded-full animate-spin"></div>
+          </div>
+        ) : type === "create" ? (
+          "Create"
+        ) : (
+          "Update"
+        )}
       </button>
     </form>
   );

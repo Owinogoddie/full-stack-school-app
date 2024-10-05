@@ -8,6 +8,7 @@ import { Parent, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 
 import { auth } from "@clerk/nextjs/server";
+import ClientOnlyComponent from "@/components/client-only-component";
 
 type ParentList = Parent & { students: Student[] };
 
@@ -67,6 +68,7 @@ const ParentListPage = async ({
       <td className="hidden md:table-cell">{item.phone}</td>
       <td className="hidden md:table-cell">{item.address}</td>
       <td>
+      <ClientOnlyComponent>
         <div className="flex items-center gap-2">
           {role === "admin" && (
             <>
@@ -75,6 +77,7 @@ const ParentListPage = async ({
             </>
           )}
         </div>
+        </ClientOnlyComponent>
       </td>
     </tr>
   );
@@ -116,6 +119,7 @@ const ParentListPage = async ({
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Parents</h1>
+        <ClientOnlyComponent>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
@@ -128,9 +132,12 @@ const ParentListPage = async ({
             {role === "admin" && <FormContainer table="parent" type="create" />}
           </div>
         </div>
+        </ClientOnlyComponent>
       </div>
       {/* LIST */}
+      <ClientOnlyComponent>
       <Table columns={columns} renderRow={renderRow} data={data} />
+      </ClientOnlyComponent>
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>

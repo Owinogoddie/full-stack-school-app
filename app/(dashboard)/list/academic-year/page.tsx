@@ -7,8 +7,9 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { AcademicYear, Prisma, Enrollment } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
+import ClientOnlyComponent from "@/components/client-only-component";
 
-type AcademicYearList = AcademicYear & { enrollments: Enrollment[] };
+type AcademicYearList = AcademicYear & { students: Enrollment[] };
 
 const AcademicYearListPage = async ({
   searchParams,
@@ -32,8 +33,13 @@ const AcademicYearListPage = async ({
       accessor: "endDate",
     },
     {
-      header: "Number of Students",
-      accessor: "enrollmentsCount",
+      header: "Total Students",
+      accessor: "totalStudents",
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Current Year",
+      accessor: "isCurrentYear",
       className: "hidden md:table-cell",
     },
     ...(role === "admin"
@@ -54,13 +60,16 @@ const AcademicYearListPage = async ({
       <td className="p-4">{item.year}</td>
       <td className="p-4">{new Date(item.startDate).toLocaleDateString()}</td>
       <td className="p-4">{new Date(item.endDate).toLocaleDateString()}</td>
-      <td className="hidden md:table-cell p-4">{item.enrollments?.length}</td>
+      <td className="hidden md:table-cell p-4">{item.students?.length || 0}</td>
+      <td className="hidden md:table-cell p-4">{item.currentAcademicYear ? "Yes" : "No"}</td>
       {role === "admin" && (
         <td className="p-4">
+          <ClientOnlyComponent>
           <div className="flex items-center gap-2">
             <FormContainer table="academicYear" type="update" data={item} />
             <FormContainer table="academicYear" type="delete" id={item.id} />
           </div>
+          </ClientOnlyComponent>
         </td>
       )}
     </tr>
@@ -92,6 +101,9 @@ const AcademicYearListPage = async ({
           case "endDate":
             query.endDate = { lte: new Date(value) };
             break;
+          case "isCurrentYear":
+            query.currentAcademicYear = value === "true";
+            break;
           default:
             break;
         }
@@ -103,7 +115,7 @@ const AcademicYearListPage = async ({
     prisma.academicYear.findMany({
       where: query,
       include: {
-        students: true,
+        students: true, // Include enrollments
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
@@ -111,11 +123,15 @@ const AcademicYearListPage = async ({
     prisma.academicYear.count({ where: query }),
   ]);
 
+
+// console.log('Academic Year Data:', JSON.stringify(data, null, 2));
+
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Academic Years</h1>
+        <ClientOnlyComponent>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
@@ -128,9 +144,12 @@ const AcademicYearListPage = async ({
             {role === "admin" && <FormContainer table="academicYear" type="create" />}
           </div>
         </div>
+        </ClientOnlyComponent>
       </div>
       {/* LIST */}
+      <ClientOnlyComponent>
       <Table columns={columns} renderRow={renderRow} data={data} />
+      </ClientOnlyComponent>
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>

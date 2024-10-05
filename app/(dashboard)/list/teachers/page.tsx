@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { auth } from "@clerk/nextjs/server";
+import ClientOnlyComponent from "@/components/client-only-component";
 
 type TeacherList = Teacher & { subjects: Subject[] } & { classes: Class[] };
 
@@ -86,7 +87,9 @@ const TeacherListPage = async ({
             </button>
           </Link>
           {role === "admin" && (
+            <ClientOnlyComponent>
             <FormContainer table="teacher" type="delete" id={item.id} />
+            </ClientOnlyComponent>
           )}
         </div>
       </td>
@@ -141,6 +144,7 @@ const TeacherListPage = async ({
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Teachers</h1>
+        <ClientOnlyComponent>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
@@ -155,8 +159,11 @@ const TeacherListPage = async ({
             )}
           </div>
         </div>
+        </ClientOnlyComponent>
       </div>
+      <ClientOnlyComponent>
       <Table columns={columns} renderRow={renderRow} data={data} />
+      </ClientOnlyComponent>
       <Pagination page={p} count={count} />
     </div>
   );

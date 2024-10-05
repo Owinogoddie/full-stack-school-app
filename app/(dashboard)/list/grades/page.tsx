@@ -7,6 +7,7 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Grade, Prisma, GradeLevel, Stage, Enrollment } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
+import ClientOnlyComponent from "@/components/client-only-component";
 
 type GradeList = Grade & { enrollments: Enrollment[] };
 
@@ -52,10 +53,12 @@ const GradeListPage = async ({
       <td className="hidden md:table-cell p-4">{item.enrollments?.length}</td>
       {role === "admin" && (
         <td className="p-4">
+          <ClientOnlyComponent>
           <div className="flex items-center gap-2">
             <FormContainer table="grade" type="update" data={item} />
             <FormContainer table="grade" type="delete" id={item.id} />
           </div>
+          </ClientOnlyComponent>
         </td>
       )}
     </tr>
@@ -109,6 +112,7 @@ const GradeListPage = async ({
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Grades</h1>
+        <ClientOnlyComponent>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
@@ -121,9 +125,12 @@ const GradeListPage = async ({
             {role === "admin" && <FormContainer table="grade" type="create" />}
           </div>
         </div>
+        </ClientOnlyComponent>
       </div>
       {/* LIST */}
+      <ClientOnlyComponent>
       <Table columns={columns} renderRow={renderRow} data={data} />
+      </ClientOnlyComponent>
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>

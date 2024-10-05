@@ -39,9 +39,10 @@ model School {
 
 model AcademicYear {
   id              Int          @id @default(autoincrement())
-  year            String // e.g., "2023-2024"
+  year            String       // e.g., "2023-2024"
   startDate       DateTime
   endDate         DateTime
+  currentAcademicYear Boolean   @default(false)  // New field
   students        Enrollment[] // Students enrolled during this academic year
   school          School?      @relation(fields: [schoolId], references: [id])
   currentStudents Student[]    @relation("CurrentAcademicYear") // List of current students in this academic year
@@ -51,6 +52,7 @@ model AcademicYear {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 }
+
 
 model Enrollment {
   id             Int              @id @default(autoincrement())

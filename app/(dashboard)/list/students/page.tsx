@@ -80,6 +80,7 @@ const StudentListPage = async ({
       <td className="hidden md:table-cell">{item.parentContact}</td>
       <td className="hidden md:table-cell">{item.address}</td>
       <td>
+      <ClientOnlyComponent>
         <div className="flex items-center gap-2">
           <Link href={`/list/students/${item.id}`}>
             <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaSky">
@@ -90,6 +91,7 @@ const StudentListPage = async ({
             <FormContainer table="student" type="delete" id={item.id} />
           )}
         </div>
+        </ClientOnlyComponent>
       </td>
     </tr>
   );
@@ -147,6 +149,7 @@ const StudentListPage = async ({
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Students</h1>
+        <ClientOnlyComponent>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
@@ -161,6 +164,7 @@ const StudentListPage = async ({
             )}
           </div>
         </div>
+        </ClientOnlyComponent>
       </div>
       {/* LIST */}
       <ClientOnlyComponent>

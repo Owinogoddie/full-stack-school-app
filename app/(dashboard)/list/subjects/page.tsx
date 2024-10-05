@@ -7,6 +7,7 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Subject, Prisma } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
+import ClientOnlyComponent from "@/components/client-only-component";
 
 const SubjectListPage = async ({
   searchParams,
@@ -84,10 +85,12 @@ const SubjectListPage = async ({
       <td className="hidden xl:table-cell p-4">{item.learningAreas.length}</td>
       {role === "admin" && (
         <td className="p-4">
+          <ClientOnlyComponent>
           <div className="flex items-center gap-2">
             <FormContainer table="subject" type="update" data={item} />
             <FormContainer table="subject" type="delete" id={item.id} />
           </div>
+          </ClientOnlyComponent>
         </td>
       )}
     </tr>
@@ -145,6 +148,7 @@ const SubjectListPage = async ({
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Subjects</h1>
+        <ClientOnlyComponent>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
@@ -157,6 +161,7 @@ const SubjectListPage = async ({
             {role === "admin" && <FormContainer table="subject" type="create" />}
           </div>
         </div>
+        </ClientOnlyComponent>
       </div>
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={data} />
