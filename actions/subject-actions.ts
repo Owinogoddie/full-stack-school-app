@@ -1,6 +1,8 @@
 'use server'
+
 import prisma from "@/lib/prisma";
 import { SubjectSchema } from "@/schemas/subject-schema";
+import { Subject } from "@prisma/client";
 
 type ResponseState = {
   success: boolean;
@@ -16,6 +18,10 @@ export const createSubject = async (data: SubjectSchema): Promise<ResponseState>
         name: data.name,
         code: data.code,
         description: data.description || "",
+        parentId: data.parentId ? parseInt(data.parentId, 10) : null,
+        relatedTo: {
+          connect: data.relatedSubjects?.map(id => ({ id: parseInt(id, 10) })) || []
+        }
       },
     });
     return { success: true, error: false, message: "Subject created successfully" };
@@ -36,6 +42,10 @@ export const updateSubject = async (data: SubjectSchema): Promise<ResponseState>
         name: data.name,
         code: data.code,
         description: data.description,
+        parentId: data.parentId ? parseInt(data.parentId, 10) : null,
+        relatedTo: {
+          set: data.relatedSubjects?.map(id => ({ id: parseInt(id, 10) })) || []
+        }
       },
     });
     return { success: true, error: false, message: "Subject updated successfully" };
@@ -58,4 +68,14 @@ export const deleteSubject = async (currentState: ResponseState, formData: FormD
     console.error(err);
     return { success: false, error: true, message: "Failed to delete Subject" };
   }
+};
+
+export const getSubjects = async (): Promise<Subject[]> => {
+  return await prisma.subject.findMany({
+    include: {
+      parent: true,
+      children: true,
+      relatedTo: true,
+    }
+  });
 };

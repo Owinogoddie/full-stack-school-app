@@ -208,20 +208,29 @@ model Admin {
 }
 
 model Subject {
-  id            Int            @id @default(autoincrement())
-  name          String
-  code          String         @unique
-  description   String
-  teachers      Teacher[]
-  grades        Grade[]
-  lessons       Lesson[]
-  results       Result[]
-  exams         Exam[]
-  examSchedules ExamSchedule[]
-  // gradeScale    GradeScale[]
-  learningAreas LearningArea[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             Int           @id @default(autoincrement())
+  name           String
+  code           String        @unique
+  description    String?
+  teachers       Teacher[]
+  grades         Grade[]
+  lessons        Lesson[]
+  results        Result[]
+  exams          Exam[]
+  examSchedules  ExamSchedule[]
+  learningAreas  LearningArea[]
+  
+  // Relations for parent and children subjects
+  parentId       Int?
+  parent         Subject?      @relation("SubjectHierarchy", fields: [parentId], references: [id])
+  children       Subject[]     @relation("SubjectHierarchy")
+  
+  // Relation for related subjects
+  relatedFrom    Subject[]     @relation("RelatedSubjects")
+  relatedTo      Subject[]     @relation("RelatedSubjects")
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model LearningArea {
