@@ -32,6 +32,11 @@ const SubjectListPage = async ({
       className: "hidden md:table-cell",
     },
     {
+      header: "Parent Subject",
+      accessor: "parentInfo",
+      className: "hidden lg:table-cell",
+    },
+    {
       header: "Related Subjects",
       accessor: "relatedInfo",
       className: "hidden lg:table-cell",
@@ -54,35 +59,33 @@ const SubjectListPage = async ({
     return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
   };
 
+  const getParentInfo = (item: Subject & { parent?: Subject | null }) => {
+    return item.parent ? item.parent.name : "None";
+  };
+
   const getRelatedInfo = (item: Subject & {
-    parent?: Subject | null;
     children: Subject[];
     relatedTo: Subject[];
-    relatedFrom: Subject[];
   }) => {
-    const relatedInfo = [];
+    const relatedSubjects = [
+      ...item.children,
+      ...item.relatedTo,
+    ];
 
-    if (item.parent) {
-      relatedInfo.push(`Parent: ${item.parent.name}`);
+    if (relatedSubjects.length === 0) {
+      return "None";
     }
 
-    if (item.children.length > 0) {
-      relatedInfo.push(`Children: ${item.children.slice(0, MAX_RELATED_ITEMS).map(child => child.name).join(', ')}${item.children.length > MAX_RELATED_ITEMS ? '...' : ''}`);
-    }
-
-    const allRelated = [...item.relatedTo, ...item.relatedFrom];
-    if (allRelated.length > 0) {
-      relatedInfo.push(`Related: ${allRelated.slice(0, MAX_RELATED_ITEMS).map(related => related.name).join(', ')}${allRelated.length > MAX_RELATED_ITEMS ? '...' : ''}`);
-    }
-
-    return relatedInfo.join(' | ');
+    return relatedSubjects
+      .slice(0, MAX_RELATED_ITEMS)
+      .map((subject) => subject.name)
+      .join(", ") + (relatedSubjects.length > MAX_RELATED_ITEMS ? "..." : "");
   };
 
   const renderRow = (item: Subject & {
     parent?: Subject | null;
     children: Subject[];
     relatedTo: Subject[];
-    relatedFrom: Subject[];
   }) => (
     <tr
       key={item.id}
@@ -90,7 +93,8 @@ const SubjectListPage = async ({
     >
       <td className="p-4">{item.name}</td>
       <td className="p-4">{item.code}</td>
-      <td className="hidden md:table-cell p-4">{trimText(item.description ||'', MAX_DESCRIPTION_LENGTH)}</td>
+      <td className="hidden md:table-cell p-4">{trimText(item.description || "", MAX_DESCRIPTION_LENGTH)}</td>
+      <td className="hidden lg:table-cell p-4">{getParentInfo(item)}</td>
       <td className="hidden lg:table-cell p-4">{getRelatedInfo(item)}</td>
       {role === "admin" && (
         <td className="p-4">
@@ -146,7 +150,6 @@ const SubjectListPage = async ({
         parent: { select: { name: true } },
         children: { select: { name: true } },
         relatedTo: { select: { name: true } },
-        relatedFrom: { select: { name: true } },
       },
     }),
     prisma.subject.count({ where: query }),

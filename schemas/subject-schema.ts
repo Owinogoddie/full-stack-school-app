@@ -1,3 +1,4 @@
+// schemas/subject-schema.ts
 import { z } from "zod";
 
 export const subjectSchema = z.object({
@@ -6,7 +7,7 @@ export const subjectSchema = z.object({
   code: z.string().min(1, "Subject code is required"),
   description: z.string().optional(),
   parentId: z.string().optional().nullable(),
-  relatedSubjects: z.array(z.string()).optional(),
+  teacherIds: z.array(z.string()).optional(),
 });
 
 export type SubjectSchema = z.infer<typeof subjectSchema>;

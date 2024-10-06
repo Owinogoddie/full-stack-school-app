@@ -1,9 +1,10 @@
+// components/SubjectForm.tsx
 import { zodResolver } from "@hookform/resolvers/zod";
 import InputField from "../input-field";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { createSubject, updateSubject, getSubjects } from "@/actions/subject-actions";
+import { createSubject, updateSubject } from "@/actions/subject-actions";
 import { SubjectSchema, subjectSchema } from "@/schemas/subject-schema";
 import { useForm, Controller } from "react-hook-form";
 import SelectField from "../select-field";
@@ -14,35 +15,23 @@ type ResponseState = {
   error: boolean;
   message?: string;
 };
-
-interface Subject {
-  id: number;
-  name: string;
-  code: string;
-  description: string | null;
-  parentId: number | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 const SubjectForm = ({
   type,
   data,
   setOpen,
+  relatedData,
 }: {
   type: "create" | "update";
   data?: Partial<SubjectSchema>;
   setOpen: Dispatch<SetStateAction<boolean>>;
+  relatedData:any
 }) => {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-
   const {
     register,
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
     setValue,
-    watch
   } = useForm<SubjectSchema>({
     resolver: zodResolver(subjectSchema),
     defaultValues: {
@@ -51,25 +40,16 @@ const SubjectForm = ({
       code: data?.code || "",
       description: data?.description || "",
       parentId: data?.parentId || null,
-      relatedSubjects: data?.relatedSubjects || [],
+      teacherIds: data?.teacherIds || [],
     },
   });
   
-  const parentId = watch('parentId');
   const [state, setState] = useState<ResponseState>({
     success: false,
     error: false,
   });
 
   const router = useRouter();
-
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      const fetchedSubjects = await getSubjects();
-      setSubjects(fetchedSubjects);
-    };
-    fetchSubjects();
-  }, []);
 
   const onSubmit = handleSubmit(async (formData) => {
     let responseState: ResponseState;
@@ -98,7 +78,7 @@ const SubjectForm = ({
       toast.error(state.message || "Something went wrong!");
     }
   }, [state, router, type, setOpen]);
-
+console.log(relatedData)
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
@@ -132,48 +112,70 @@ const SubjectForm = ({
         fullWidth
         textarea
       />
-
-      <SelectField
-        label="Parent Subject"
-        options={[
-          { value: '', label: 'None' },
-          ...subjects.map((subject) => ({
-            value: subject.id.toString(),
-            label: subject.name,
-          }))
-        ]}
-        name="parentId"
-        register={register}
-        setValue={setValue}
-        error={errors.parentId}
-        defaultValue={parentId ? parentId.toString() : ''}
-      />
+    <SelectField
+            label="Parent Subject"
+            options={relatedData?.allSubjects?.map((subject: any) => ({
+              value: subject.id.toString(),
+              label: subject.name,
+            }))}
+            name="parentId"
+            register={register}
+            setValue={setValue}
+            error={errors.parentId}
+            defaultValue={data?.parentId?.toString() ||""}
+          />
+     
 
       <Controller
-        name="relatedSubjects"
+        name="teacherIds"
         control={control}
         render={({ field }) => (
           <MultiSelect
-            label="Related Subjects"
-            options={subjects.map((subject) => ({
-              id: subject.id.toString(),
-              label: subject.name,
+            label="Teachers"
+            options={relatedData.teachers.map((teacher:any) => ({
+              id: teacher.id.toString(),
+              label: teacher.firstName,
             }))}
             value={field.value || []}
-            onChange={(newValue) => {
-              field.onChange(newValue);
-            }}
-            error={errors.relatedSubjects}
+            onChange={(newValue) => field.onChange(newValue)}
+            error={errors.teacherIds}
           />
         )}
       />
 
+      {/* Error Display */}
+      {state.error && (
+        <div className="mt-4 p-4 border border-red-300 rounded-md bg-red-50">
+          <h2 className="text-red-600 font-semibold">Error:</h2>
+          {state.message ? (
+            <ul className="list-disc list-inside text-red-500">
+              
+                <li className="text-sm">
+                  {state.message}
+                </li>
+            </ul>
+          ) : (
+            <span className="text-sm">
+              {state.message || "Something went wrong!"}
+            </span>
+          )}
+        </div>
+      )}
+
       <button
         type="submit"
-        className="bg-blue-400 text-white p-2 rounded-md"
+        className="bg-blue-400 text-white p-2 rounded-md relative"
         disabled={isSubmitting}
       >
-        {isSubmitting ? "Submitting..." : type === "create" ? "Create" : "Update"}
+        {isSubmitting ? (
+          <div className="flex items-center justify-center">
+            <div className="w-5 h-5 border-t-2 border-white border-solid rounded-full animate-spin"></div>
+          </div>
+        ) : type === "create" ? (
+          "Create"
+        ) : (
+          "Update"
+        )}
       </button>
     </form>
   );
