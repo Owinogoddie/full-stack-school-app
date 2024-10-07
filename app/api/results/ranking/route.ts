@@ -35,6 +35,13 @@ export async function GET(request: Request) {
     },
   });
 
+  // Fetch all subjects
+  const allSubjects = await prisma.subject.findMany({
+    where: {
+      id: { in: subjectIds.map(id => parseInt(id)) }
+    }
+  });
+
   // Group results by student and subject
   const studentResults = results.reduce((acc: any, result: any) => {
     if (!acc[result.studentId]) {
@@ -71,9 +78,10 @@ export async function GET(request: Request) {
             averageScore,
           };
         } else {
-          totalScore += 0;
+          // Use the actual subject name with zero score
+          const subjectName = allSubjects.find(s => s.id.toString() === subjectId)?.name || "Unknown Subject";
           return {
-            name: 'Unknown Subject',
+            name: subjectName,
             averageScore: 0,
           };
         }

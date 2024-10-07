@@ -59,6 +59,43 @@ export function ResultsRankingComponent({
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [filteredExams, setFilteredExams] = useState<any[]>([]);
+  const [filteredClasses, setFilteredClasses] = useState<any[]>([]);
+  const [, setFilteredGrades] = useState<any[]>([]);
+  // const [filteredGrades, setFilteredGrades] = useState<any[]>([]);
+
+  // filter exams based on academic year
+  useEffect(() => {
+    if (filters.academicYearId) {
+      const exams = relatedData.exams.filter(exam => exam.academicYearId.toString() === filters.academicYearId);
+      setFilteredExams(exams);
+    } else {
+      setFilteredExams([]);
+    }
+  }, [filters.academicYearId, relatedData.exams]);
+
+  // filter classes based on grade
+  useEffect(() => {
+    if (filters.gradeId) {
+      const classes = relatedData.classes.filter(cls => cls.gradeId.toString() === filters.gradeId);
+      setFilteredClasses(classes);
+    } else {
+      setFilteredClasses(relatedData.classes);
+    }
+  }, [filters.gradeId, relatedData.classes]);
+
+  // filter grade based on class
+  useEffect(() => {
+    if (filters.classId) {
+      const selectedClass = relatedData.classes.find(cls => cls.id.toString() === filters.classId);
+      if (selectedClass) {
+        const grade = relatedData.grades.find(g => g.id === selectedClass.gradeId);
+        setFilteredGrades(grade ? [grade] : []);
+      }
+    } else {
+      setFilteredGrades(relatedData.grades);
+    }
+  }, [filters.classId, relatedData.classes, relatedData.grades]);
 
   const router = useRouter();
 
@@ -117,35 +154,35 @@ export function ResultsRankingComponent({
     setIsExporting(true);
     try {
       const doc = new jsPDF();
-
+  
       // Add logo and school name
       const logoImg = new Image();
       logoImg.src = "/logo.png";
-
+  
       const pageWidth = doc.internal.pageSize.width;
       const logoWidth = 10;
       const logoHeight = 10;
-
+  
       doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
-
+  
       const schoolNameWidth = doc.getTextWidth(schoolName);
       const totalContentWidth = logoWidth + 5 + schoolNameWidth;
       const startX = (pageWidth - totalContentWidth) / 2;
-
+  
       doc.addImage(logoImg, "PNG", startX, 10, logoWidth, logoHeight);
       doc.text(schoolName, startX + logoWidth + 5, 17);
-
+  
       // Add title and filters
       doc.setFontSize(18);
       doc.setTextColor(0, 102, 204);
       doc.text("Student Ranking Report", 14, 40);
-
+  
       doc.setFontSize(11);
       doc.setTextColor(0);
       doc.setFont("helvetica", "normal");
       let yPos = 50;
-
+  
       const addFilterInfo = (label: string, value: string) => {
         if (value) {
           doc.setFont("helvetica", "bold");
@@ -155,30 +192,50 @@ export function ResultsRankingComponent({
           yPos += 6;
         }
       };
-
+  
       addFilterInfo(
         "Academic Year",
         relatedData.academicYears.find((ay) => ay.id.toString() === filters.academicYearId)
           ?.year || ""
       );
-      addFilterInfo(
-        "Class",
-        relatedData.classes.find((c) => c.id.toString() === filters.classId)?.name || ""
-      );
-      addFilterInfo(
-        "Grade",
-        relatedData.grades.find((g) => g.id.toString() === filters.gradeId)?.levelName || ""
-      );
-
+      
+      // Add exams to PDF
+      if (filters.examIds.length > 0) {
+        const examNames = filteredExams
+          .filter(exam => filters.examIds.includes(exam.id.toString()))
+          .map(exam => exam.title)
+          .join(", ");
+        addFilterInfo("Exams", examNames);
+      }
+  
+      if (filters.classId) {
+        const className = relatedData.classes.find((c) => c.id.toString() === filters.classId)?.name || "";
+        addFilterInfo("Class", className);
+        const grade = relatedData.grades.find((g) => g.id === relatedData.classes.find((c) => c.id.toString() === filters.classId)?.gradeId);
+        if (grade) {
+          addFilterInfo("Grade", grade.levelName);
+        }
+      } else if (filters.gradeId) {
+        addFilterInfo(
+          "Grade",
+          relatedData.grades.find((g) => g.id.toString() === filters.gradeId)?.levelName || ""
+        );
+      }
+  
       // Add ranking table
-      const tableColumn = ["Rank", "Student", "Overall Average", ...ranking[0]?.subjectAverages.map((s) => s.name) || []];
-      const tableRows = ranking.map((item, index) => [
-        index + 1,
+      const tableColumn = [
+        "Rank",
+        "Student",
+        "Overall Average",
+        ...ranking[0]?.subjectAverages.map((s) => s.name) || []
+      ];
+      const tableRows = ranking.map((item) => [
+        item.rank,
         item.studentName,
         item.overallAverage.toFixed(2),
         ...item.subjectAverages.map((s) => s.averageScore.toFixed(2)),
       ]);
-
+  
       (doc as any).autoTable({
         head: [tableColumn],
         body: tableRows,
@@ -189,7 +246,7 @@ export function ResultsRankingComponent({
         tableLineColor: [200, 200, 200],
         tableLineWidth: 0.1,
       });
-
+  
       // Add footer
       const pageCount = (doc as any).internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
@@ -208,7 +265,7 @@ export function ResultsRankingComponent({
           doc.internal.pageSize.height - 10
         );
       }
-
+  
       doc.save("student_ranking_report.pdf");
     } catch (error) {
       console.error("Error exporting to PDF:", error);
@@ -240,7 +297,7 @@ export function ResultsRankingComponent({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <Select
+      <Select
           options={relatedData.academicYears.map((ay) => ({ value: ay.id.toString(), label: ay.year }))}
           onChange={(selectedOption: any) => handleFilterChange("academicYearId", selectedOption ? selectedOption.value : "")}
           placeholder="Select Academic Year"
@@ -248,7 +305,7 @@ export function ResultsRankingComponent({
           classNamePrefix="react-select"
         />
         <Select
-          options={relatedData.exams.map((exam) => ({ value: exam.id.toString(), label: exam.title }))}
+          options={filteredExams.map((exam) => ({ value: exam.id.toString(), label: exam.title }))}
           onChange={(selectedOptions: any) => handleFilterChange("examIds", selectedOptions ? selectedOptions.map((option: any) => option.value) : [])}
           placeholder="Select Exams"
           isMulti
@@ -265,8 +322,8 @@ export function ResultsRankingComponent({
           className="react-select-container"
           classNamePrefix="react-select"
         />
-        <Select
-          options={relatedData.classes.map((c) => ({ value: c.id.toString(), label: c.name }))}
+         <Select
+          options={filteredClasses.map((c) => ({ value: c.id.toString(), label: c.name }))}
           onChange={(selectedOption: any) => {
             handleFilterChange("classId", selectedOption ? selectedOption.value : "");
             handleFilterChange("gradeId", ""); // Clear grade selection when class is selected
