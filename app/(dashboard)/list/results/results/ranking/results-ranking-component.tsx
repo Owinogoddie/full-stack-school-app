@@ -25,7 +25,10 @@ type Filters = {
   search: string;
 };
 
+
+
 type RankingItem = {
+  rank: number;
   studentName: string;
   overallAverage: number;
   subjectAverages: { name: string; averageScore: number }[];
@@ -74,6 +77,7 @@ export function ResultsRankingComponent({
       if (filters.gradeId) queryParams.set("gradeId", filters.gradeId);
       filters.subjectIds.forEach(id => queryParams.append("subjectIds[]", id));
       queryParams.set("order", order);
+      if (filters.search) queryParams.set("search", filters.search);
 
       router.replace(`?${queryParams.toString()}`, { scroll: false });
 
@@ -222,10 +226,9 @@ export function ResultsRankingComponent({
       accessor: `subject_${subjectId}`,
     })),
   ];
-
-  const renderRow = (item: RankingItem, index: number) => (
-    <tr key={index} className="border-b border-gray-200 hover:bg-gray-100">
-      <td className="p-2">{index + 1}</td>
+  const renderRow = (item: RankingItem) => (
+    <tr key={item.rank} className="border-b border-gray-200 hover:bg-gray-100">
+      <td className="p-2">{item.rank}</td>
       <td className="p-2">{item.studentName}</td>
       <td className="p-2">{item.overallAverage.toFixed(2)}</td>
       {item.subjectAverages.map((subject, subIndex) => (

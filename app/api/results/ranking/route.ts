@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   const classId = searchParams.get('classId');
   const subjectIds = searchParams.getAll('subjectIds[]');
   const order = searchParams.get('order') || 'desc';
+  const search = searchParams.get('search') || '';
 
   if (!academicYearId || examIds.length === 0 || (!gradeId && !classId) || subjectIds.length === 0) {
     return NextResponse.json({ ranking: [] });
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
   }, {});
 
   // Calculate average scores and create ranking
-  const ranking = Object.values(studentResults)
+  let ranking = Object.values(studentResults)
     .map((studentResult: any) => {
       let totalScore = 0;
       const subjectAverages = subjectIds.map(subjectId => {
@@ -87,6 +88,19 @@ export async function GET(request: Request) {
       };
     })
     .sort((a: any, b: any) => order === 'desc' ? b.overallAverage - a.overallAverage : a.overallAverage - b.overallAverage);
+
+  // Apply search filter
+  if (search) {
+    ranking = ranking.filter((item: any) =>
+      item.studentName.toLowerCase().includes(search.toLowerCase())
+    );
+  }
+
+  // Add rank to each item
+  ranking = ranking.map((item: any, index: number) => ({
+    ...item,
+    rank: index + 1,
+  }));
 
   return NextResponse.json({ ranking });
 }
