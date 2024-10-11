@@ -1,7 +1,7 @@
 // app/list/attendance/attendance-component.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Select from "react-select";
 import Table from "@/components/table";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
@@ -40,7 +40,7 @@ export function AttendanceComponent({ relatedData }: { relatedData: any }) {
     }
   }, [filters.gradeId, relatedData.classes]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     if (!filters.classId || !filters.date) return;
 
     setIsLoading(true);
@@ -53,11 +53,11 @@ export function AttendanceComponent({ relatedData }: { relatedData: any }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters.classId, filters.date]);
 
   useEffect(() => {
     fetchStudents();
-  }, [filters.classId, filters.date]);
+  }, [fetchStudents]);
 
   const handleFilterChange = (name: string, value: any) => {
     setFilters(prevFilters => ({ ...prevFilters, [name]: value }));
