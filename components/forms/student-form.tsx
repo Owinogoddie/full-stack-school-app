@@ -47,7 +47,7 @@ const StudentForm = ({
       enrollmentDate: data?.enrollmentDate ? new Date(data.enrollmentDate).toISOString().split("T")[0] : undefined,
       classId: data?.classId?.toString(),
       gradeId: data?.gradeId?.toString(),
-      academicYearId: data?.academicYearId?.toString(),
+      parentId: data?.parentId?.toString(),
     },
   });
 
@@ -61,6 +61,7 @@ const StudentForm = ({
 
   const password = watch("password");
   const repeatPassword = watch("repeatPassword");
+
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
       console.log("Validation errors:", errors);
@@ -95,17 +96,13 @@ const StudentForm = ({
     } else {
       const convertedData = {
         ...formData,
-        id: data?.id || undefined,  // Use undefined if id is not provided
+        id: data?.id || undefined,
         img: img?.secure_url || null,
-        schoolId: formData.schoolId || null,  // Use null if schoolId is not provided
+        schoolId: formData.schoolId || null,
         classId: formData.classId ? Number(formData.classId) : undefined,
         gradeId: formData.gradeId ? Number(formData.gradeId) : undefined,
       };
-      responseState = await updateStudent({
-        ...formData,
-        ...convertedData,
-        img: img?.secure_url || null,
-      });
+      responseState = await updateStudent(convertedData);
     }
 
     setState(responseState);
@@ -123,8 +120,7 @@ const StudentForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  const { parents } = relatedData;
-  console.log(data)
+  const { parents, grades, classes } = relatedData;
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
@@ -214,14 +210,6 @@ const StudentForm = ({
             defaultValue={data?.gender}
           />
           <InputField
-            label="National ID"
-            name="nationalId"
-            defaultValue={data?.nationalId}
-            register={register}
-            error={errors.nationalId}
-            placeholder="Enter National ID"
-          />
-          <InputField
             label="Address"
             name="address"
             defaultValue={data?.address}
@@ -236,30 +224,6 @@ const StudentForm = ({
       <div>
         <span className="text-xs text-gray-400 font-medium">Parent Information</span>
         <div className="flex flex-wrap gap-4 mt-2">
-          <InputField
-            label="Parent Name"
-            name="parentName"
-            defaultValue={data?.parentName}
-            register={register}
-            error={errors.parentName}
-            placeholder="Enter Parent Name"
-          />
-          <InputField
-            label="Parent Contact"
-            name="parentContact"
-            defaultValue={data?.parentContact}
-            register={register}
-            error={errors.parentContact}
-            placeholder="Enter Parent Contact"
-          />
-          <InputField
-            label="Parent Email"
-            name="parentEmail"
-            defaultValue={data?.parentEmail}
-            register={register}
-            error={errors.parentEmail}
-            placeholder="Enter Parent Email"
-          />
           <SelectField
             label="Parent"
             options={parents.map((parent: any) => ({
@@ -279,56 +243,19 @@ const StudentForm = ({
       <div>
         <span className="text-xs text-gray-400 font-medium">Academic Information</span>
         <div className="flex flex-wrap gap-4 mt-2">
-          <InputField
-            label="Admission Number"
-            name="admissionNumber"
-            defaultValue={data?.admissionNumber}
-            register={register}
-            error={errors?.admissionNumber}
-            placeholder="Enter Admission Number"
-          />
           <SelectField
-          label="Grade"
-          options={relatedData?.grades?.map((grade:any) => ({
-            value: grade.id,
-            label: grade.levelName,
-          }))} // Mapping related data for grades
-          name="gradeId"
-          register={register}
-          setValue={setValue}
-          error={errors.gradeId}
-          defaultValue={data?.gradeId}
-        />
-          <SelectField
-          label="Class"
-          options={relatedData.classes.map((grade:any) => ({
-            value: grade.id,
-            label: grade.name,
-          }))} // Mapping related data for grades
-          name="classId"
-          register={register}
-          setValue={setValue}
-          error={errors.classId}
-          defaultValue={data?.classId}
-        />
-         {
-          type==='create' && (
-            <SelectField
-            label="Academic Year"
-            options={relatedData.academicYears.map((year:any) => ({
-              value: year.id,
-              label: year.year,
+            label="Grade"
+            options={grades.map((grade: any) => ({
+              value: grade.id,
+              label: grade.levelName,
             }))}
-            name="academicYearId"
+            name="gradeId"
             register={register}
             setValue={setValue}
-            error={errors.academicYearId}
-            defaultValue={data?.academicYearId}
+            error={errors.gradeId}
+            defaultValue={data?.gradeId}
           />
-          )
-         }
-
-          {/* <SelectField
+          <SelectField
             label="Class"
             options={classes.map((classItem: any) => ({
               value: classItem.id,
@@ -339,8 +266,7 @@ const StudentForm = ({
             setValue={setValue}
             error={errors.classId}
             defaultValue={data?.classId}
-          /> */}
-          
+          />
           <InputField
             label="Enrollment Date"
             name="enrollmentDate"
@@ -349,14 +275,6 @@ const StudentForm = ({
             register={register}
             error={errors.enrollmentDate}
           />
-          {/* <InputField
-            label="id"
-            name="id"
-            type="hidden"
-            defaultValue={data?.id}
-            register={register}
-            error={errors.id}
-          /> */}
         </div>
       </div>
 
@@ -382,34 +300,34 @@ const StudentForm = ({
           />
         </div>
         <div className="flex flex-col gap-2 w-full md:w-1/2">
-        <label className="text-xs text-gray-500">Photo</label>
-        <CldUploadWidget
-          uploadPreset="ex-academy"
-          onSuccess={(result, { widget }) => {
-            setImg(result.info);
-            widget.close();
-          }}
-        >
-          {({ open }) => (
-            <div
-              className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
-              onClick={() => open()}
-            >
-              <Image src="/upload.png" alt="" width={28} height={28} />
-              <span>Upload a photo</span>
-            </div>
+          <label className="text-xs text-gray-500">Photo</label>
+          <CldUploadWidget
+            uploadPreset="ex-academy"
+            onSuccess={(result, { widget }) => {
+              setImg(result.info);
+              widget.close();
+            }}
+          >
+            {({ open }) => (
+              <div
+                className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
+                onClick={() => open()}
+              >
+                <Image src="/upload.png" alt="" width={28} height={28} />
+                <span>Upload a photo</span>
+              </div>
+            )}
+          </CldUploadWidget>
+          {img && (
+            <Image
+              src={img.secure_url || img}
+              alt="Student photo"
+              width={50}
+              height={50}
+              className="mt-2 rounded-md"
+            />
           )}
-        </CldUploadWidget>
-        {img && (
-          <Image
-            src={img.secure_url || img}
-            alt="Parent photo"
-            width={50}
-            height={50}
-            className="mt-2 rounded-md"
-          />
-        )}
-      </div>
+        </div>
       </div>
 
       {/* Error Display */}

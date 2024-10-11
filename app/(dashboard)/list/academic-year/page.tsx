@@ -25,12 +25,8 @@ const AcademicYearListPage = async ({
       accessor: "year",
     },
     {
-      header: "Start Date",
-      accessor: "startDate",
-    },
-    {
-      header: "End Date",
-      accessor: "endDate",
+      header: "Period",
+      accessor: "period",
     },
     {
       header: "Total Students",
@@ -58,17 +54,19 @@ const AcademicYearListPage = async ({
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
       <td className="p-4">{item.year}</td>
-      <td className="p-4">{new Date(item.startDate).toLocaleDateString()}</td>
-      <td className="p-4">{new Date(item.endDate).toLocaleDateString()}</td>
+      <td className="p-4 items-center flex flex-col justify-center text-sm">
+        <span>From {new Date(item.startDate).toLocaleDateString()}</span>
+        <span>To {new Date(item.endDate).toLocaleDateString()}</span>
+      </td>
       <td className="hidden md:table-cell p-4">{item.students?.length || 0}</td>
       <td className="hidden md:table-cell p-4">{item.currentAcademicYear ? "Yes" : "No"}</td>
       {role === "admin" && (
         <td className="p-4">
           <ClientOnlyComponent>
-          <div className="flex items-center gap-2">
-            <FormContainer table="academicYear" type="update" data={item} />
-            <FormContainer table="academicYear" type="delete" id={item.id} />
-          </div>
+            <div className="flex items-center gap-2">
+              <FormContainer table="academicYear" type="update" data={item} />
+              <FormContainer table="academicYear" type="delete" id={item.id} />
+            </div>
           </ClientOnlyComponent>
         </td>
       )}
@@ -115,7 +113,7 @@ const AcademicYearListPage = async ({
     prisma.academicYear.findMany({
       where: query,
       include: {
-        students: true, // Include enrollments
+        students: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
@@ -123,32 +121,29 @@ const AcademicYearListPage = async ({
     prisma.academicYear.count({ where: query }),
   ]);
 
-
-// console.log('Academic Year Data:', JSON.stringify(data, null, 2));
-
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Academic Years</h1>
         <ClientOnlyComponent>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <TableSearch />
-          <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            {role === "admin" && <FormContainer table="academicYear" type="create" />}
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            <TableSearch />
+            <div className="flex items-center gap-4 self-end">
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                <Image src="/filter.png" alt="" width={14} height={14} />
+              </button>
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                <Image src="/sort.png" alt="" width={14} height={14} />
+              </button>
+              {role === "admin" && <FormContainer table="academicYear" type="create" />}
+            </div>
           </div>
-        </div>
         </ClientOnlyComponent>
       </div>
       {/* LIST */}
       <ClientOnlyComponent>
-      <Table columns={columns} renderRow={renderRow} data={data} />
+        <Table columns={columns} renderRow={renderRow} data={data} />
       </ClientOnlyComponent>
       {/* PAGINATION */}
       <Pagination page={p} count={count} />

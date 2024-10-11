@@ -1,6 +1,7 @@
 'use server'
 import prisma from "@/lib/prisma";
 import { DepartmentSchema } from "@/schemas/department-schema";
+import { Prisma } from "@prisma/client";
 
 type ResponseState = {
   success: boolean;
@@ -25,6 +26,15 @@ export const createDepartment = async (data: DepartmentSchema): Promise<Response
     return { success: true, error: false, message: "Department created successfully" };
   } catch (err) {
     console.error(err);
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === 'P2002') {
+        return { 
+          success: false, 
+          error: true, 
+          message: "That teacher already has a department." 
+        };
+      }
+    }
     return { success: false, error: true, message: "Failed to create department" };
   }
 };
@@ -46,6 +56,15 @@ export const updateDepartment = async (data: DepartmentSchema): Promise<Response
     return { success: true, error: false, message: "Department updated successfully" };
   } catch (err) {
     console.error(err);
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === 'P2002') {
+        return { 
+          success: false, 
+          error: true, 
+          message: "That teacher already has a department." 
+        };
+      }
+    }
     return { success: false, error: true, message: "Failed to update department" };
   }
 };

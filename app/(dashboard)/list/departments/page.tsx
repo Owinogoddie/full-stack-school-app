@@ -35,8 +35,8 @@ const DepartmentListPage = async ({
       className: "hidden md:table-cell",
     },
     {
-      header: "Number of Teachers",
-      accessor: "teachersCount",
+      header: "Teachers",
+      accessor: "teachers",
       className: "hidden md:table-cell",
     },
     ...(role === "admin"
@@ -54,6 +54,12 @@ const DepartmentListPage = async ({
     if (!text) return ""; // Return empty if no text is provided
     return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text; // Trim and add ellipsis
   };
+
+  const renderTeachers = (teachers: Teacher[]) => {
+    if (teachers.length === 0) return "No teachers";
+    return teachers.map((teacher) => `${teacher.firstName} ${teacher.lastName}`).join(", ");
+  };
+
   const renderRow = (item: DepartmentList) => (
     <tr
       key={item.id}
@@ -61,15 +67,15 @@ const DepartmentListPage = async ({
     >
       <td className="p-4">{item.name}</td>
       <td className="hidden md:table-cell p-4">{trimText(item.description || undefined, MAX_DESCRIPTION_LENGTH)}</td>
-      <td className="hidden md:table-cell p-4">{item.headTeacher?.firstName} {item.headTeacher?.lastName}</td>
-      <td className="hidden md:table-cell p-4">{item.teachers.length}</td>
+      <td className="hidden md:table-cell p-4 text-xs"> <p>{item.headTeacher?.firstName} {item.headTeacher?.lastName}</p> </td>
+      <td className="hidden md:table-cell p-4">{renderTeachers(item.teachers)}</td>
       {role === "admin" && (
         <td className="p-4">
           <ClientOnlyComponent>
-          <div className="flex items-center gap-2">
-            <FormContainer table="department" type="update" data={item} />
-            <FormContainer table="department" type="delete" id={item.id} />
-          </div>
+            <div className="flex items-center gap-2">
+              <FormContainer table="department" type="update" data={item} />
+              <FormContainer table="department" type="delete" id={item.id} />
+            </div>
           </ClientOnlyComponent>
         </td>
       )}
@@ -126,23 +132,23 @@ const DepartmentListPage = async ({
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Departments</h1>
         <ClientOnlyComponent>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <TableSearch />
-          <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            {role === "admin" && <FormContainer table="department" type="create" />}
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            <TableSearch />
+            <div className="flex items-center gap-4 self-end">
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                <Image src="/filter.png" alt="" width={14} height={14} />
+              </button>
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                <Image src="/sort.png" alt="" width={14} height={14} />
+              </button>
+              {role === "admin" && <FormContainer table="department" type="create" />}
+            </div>
           </div>
-        </div>
         </ClientOnlyComponent>
       </div>
       {/* LIST */}
       <ClientOnlyComponent>
-      <Table columns={columns} renderRow={renderRow} data={data} />
+        <Table columns={columns} renderRow={renderRow} data={data} />
       </ClientOnlyComponent>
       {/* PAGINATION */}
       <Pagination page={p} count={count} />

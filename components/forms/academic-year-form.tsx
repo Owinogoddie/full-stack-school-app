@@ -5,8 +5,14 @@ import InputField from "../input-field";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { createAcademicYear, updateAcademicYear } from "@/actions/academic-year-actions";
-import { AcademicYearSchema, academicYearSchema } from "@/schemas/academic-year-schema";
+import {
+  createAcademicYear,
+  updateAcademicYear,
+} from "@/actions/academic-year-actions";
+import {
+  AcademicYearSchema,
+  academicYearSchema,
+} from "@/schemas/academic-year-schema";
 import { useForm } from "react-hook-form";
 
 type ResponseState = {
@@ -35,6 +41,9 @@ const AcademicYearForm = ({
     resolver: zodResolver(schema),
     defaultValues: {
       ...data,
+
+      startDate: data?.startDate?.toISOString().split("T")[0],
+      endDate: data?.endDate?.toISOString().split("T")[0],
     },
   });
 
@@ -74,7 +83,9 @@ const AcademicYearForm = ({
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new Academic Year" : "Update the Academic Year"}
+        {type === "create"
+          ? "Create a new Academic Year"
+          : "Update the Academic Year"}
       </h1>
 
       <InputField

@@ -53,7 +53,7 @@ const DepartmentForm = ({
   const onSubmit = handleSubmit(async (formData) => {
     let responseState: ResponseState;
     if (type === "create") {
-      console.log(formData)
+      // console.log(formData)
       responseState = await createDepartment(formData);
     } else {
       responseState = await updateDepartment(formData);
@@ -113,16 +113,38 @@ const DepartmentForm = ({
         error={errors.headTeacherId}
         defaultValue={data?.headTeacherId}
       />
+      {state.error && (
+        <div className="mt-4 p-4 border border-red-300 rounded-md bg-red-50">
+          <h2 className="text-red-600 font-semibold">Error:</h2>
+          {state.message ? (
+            <ul className="list-disc list-inside text-red-500">
+              
+                <li className="text-sm">
+                  {state.message}
+                </li>
+            </ul>
+          ) : (
+            <span className="text-sm">
+              {state.message || "Something went wrong!"}
+            </span>
+          )}
+        </div>
+      )}
       <button
         type="submit"
-        className="bg-blue-400 text-white p-2 rounded-md"
+        className="bg-blue-400 text-white p-2 rounded-md relative"
         disabled={isSubmitting}
       >
-        {isSubmitting
-          ? "Submitting..."
-          : type === "create"
-          ? "Create"
-          : "Update"}
+        
+        {isSubmitting ? (
+          <div className="flex items-center justify-center">
+            <div className="w-5 h-5 border-t-2 border-white border-solid rounded-full animate-spin"></div>
+          </div>
+        ) : type === "create" ? (
+          "Create"
+        ) : (
+          "Update"
+        )}
       </button>
     </form>
   );

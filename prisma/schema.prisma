@@ -31,8 +31,13 @@ model School {
   academicYears AcademicYear[]
   departments   Department[]
   enrollments   Enrollment[]
+  curricula    Curriculum[]
+  fees         Fee[]
+  books        Book[]
+  clubs        Club[]
   transfersFrom TransferRecord[] @relation("FromSchool")
   transfersTo   TransferRecord[] @relation("ToSchool")
+  specializedPrograms SpecializedProgram[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 }
@@ -52,7 +57,6 @@ model AcademicYear {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 }
-
 
 model Enrollment {
   id             Int              @id @default(autoincrement())
@@ -86,6 +90,7 @@ model Grade {
   enrollments   Enrollment[]
   results       Result[]
   exams         Exam[]
+  learningObjectives LearningObjective[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -111,7 +116,6 @@ model Class {
   updatedAt     DateTime       @updatedAt
 }
 
-//img       String?
 model Parent {
   id         String    @id @default(uuid())
   nationalId String?   @unique
@@ -129,16 +133,12 @@ model Parent {
 model Student {
   id                    String           @id @default(uuid())
   upi                   String           @unique
-  admissionNumber       String?
+  admissionNumber       String           @unique
   img                   String?
   firstName             String
   lastName              String
   dateOfBirth           DateTime
   gender                Gender
-  nationalId            String?          @unique
-  parentName            String
-  parentContact         String
-  parentEmail           String?
   address               String
   class                 Class?           @relation(fields: [classId], references: [id])
   classId               Int?
@@ -162,6 +162,11 @@ model Student {
   transferRecords       TransferRecord[]
   receivedFiles         File[]           @relation("StudentFiles")
   results               Result[]
+  bookLoans             BookLoan[]
+  clubs                 Club[]
+  payments              Payment[]
+  specializedPrograms   SpecializedProgram[]
+  healthRecord          HealthRecord?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 }
@@ -187,6 +192,7 @@ model Teacher {
   school           School?          @relation(fields: [schoolId], references: [id])
   schoolId         String?
   lessons          Lesson[]
+  specializedPrograms SpecializedProgram[]
   department       Department?      @relation("DepartmentTeachersRelation", fields: [departmentId], references: [id])
   departmentId     Int?
   headOfDepartment Department?      @relation("HeadTeacherRelation")
@@ -194,6 +200,8 @@ model Teacher {
   receivedFiles    File[]           @relation("ReceivedFiles")
   createdMeetings  Meeting[]        @relation("MeetingCreator")
   attendedMeetings Meeting[]        @relation("MeetingAttendees")
+
+  supervisedClubs Club[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 }
@@ -208,31 +216,135 @@ model Admin {
 }
 
 model Subject {
-  id             Int           @id @default(autoincrement())
-  name           String
-  code           String        @unique
-  description    String?
-  teachers       Teacher[]
-  grades         Grade[]
-  lessons        Lesson[]
-  results        Result[]
-  exams          Exam[]
-  examSchedules  ExamSchedule[]
-  learningAreas  LearningArea[]
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  code               String              @unique
+  description        String?
+  teachers           Teacher[]
+  grades             Grade[]
+  lessons            Lesson[]
+  results            Result[]
+  exams              Exam[]
+  category           SubjectCategory     @default(CORE)
+  curriculum         Curriculum?         @relation(fields: [curriculumId], references: [id])
+  curriculumId       Int?
+  learningObjectives LearningObjective[]
+  examSchedules      ExamSchedule[]
+  learningAreas      LearningArea[]
+  specializedPrograms SpecializedProgram[] 
   
   // Relations for parent and children subjects
-  parentId       Int?
-  parent         Subject?      @relation("SubjectHierarchy", fields: [parentId], references: [id])
-  children       Subject[]     @relation("SubjectHierarchy")
+  parentId           Int?
+  parent             Subject?            @relation("SubjectHierarchy", fields: [parentId], references: [id])
+  children           Subject[]           @relation("SubjectHierarchy")
   
   // Relation for related subjects
-  relatedFrom    Subject[]     @relation("RelatedSubjects")
-  relatedTo      Subject[]     @relation("RelatedSubjects")
+  relatedFrom        Subject[]           @relation("RelatedSubjects")
+  relatedTo          Subject[]           @relation("RelatedSubjects")
   
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+model Curriculum {
+  id             Int               @id @default(autoincrement())
+  name           String
+  description    String?
+  type           CurriculumType
+  subjects       Subject[]
+  learningAreas  LearningArea[]
+  school         School?            @relation(fields: [schoolId], references: [id])
+  schoolId       String?
+  coreCompetencies CoreCompetency[]  // Added relation to CoreCompetency
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 }
 
+model LearningObjective {
+  id        Int      @id @default(autoincrement())
+  objective String
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  subjectId Int
+  grade     Grade    @relation(fields: [gradeId], references: [id])
+  gradeId   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Fee {
+  id          Int       @id @default(autoincrement())
+  name        String
+  amount      Float
+  dueDate     DateTime
+  description String?
+  school      School?    @relation(fields: [schoolId], references: [id])
+  schoolId    String?
+  payments    Payment[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+model Payment {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  date      DateTime
+  method    PaymentMethod
+  status    PaymentStatus
+  student   Student  @relation(fields: [studentId], references: [id])
+  studentId String
+  fee       Fee      @relation(fields: [feeId], references: [id])
+  feeId     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Book {
+  id          Int        @id @default(autoincrement())
+  title       String
+  author      String
+  isbn        String     @unique
+  publisher   String?
+  year        Int?
+  category    String?
+  description String?
+  quantity    Int
+  school      School?     @relation(fields: [schoolId], references: [id])
+  schoolId    String?
+  loans       BookLoan[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+model BookLoan {
+  id         Int       @id @default(autoincrement())
+  book       Book      @relation(fields: [bookId], references: [id])
+  bookId     Int
+  student    Student   @relation(fields: [studentId], references: [id])
+  studentId  String
+  loanDate   DateTime
+  returnDate DateTime?
+  status     LoanStatus
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+model Club {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  supervisor  Teacher  @relation(fields: [supervisorId], references: [id])
+  supervisorId String
+  members     Student[]
+  school      School?   @relation(fields: [schoolId], references: [id])
+  schoolId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model HealthRecord {
+  id                Int      @id @default(autoincrement())
+  student           Student  @relation(fields: [studentId], references: [id])
+  studentId         String   @unique
+  bloodType         String?
+  allergies         String?
+  medicalHistory    String?
+  emergencyContact  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
 model LearningArea {
   id          Int       @id @default(autoincrement())
   name        String
@@ -240,9 +352,12 @@ model LearningArea {
   grade       Grade     @relation(fields: [gradeId], references: [id])
   gradeId     Int
   subjects    Subject[]
+  curriculum  Curriculum @relation(fields: [curriculumId], references: [id])  // Added relation to Curriculum
+  curriculumId Int
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
+
 
 model Lesson {
   id          Int          @id @default(autoincrement())
@@ -289,20 +404,30 @@ model Result {
 }
 
 model Assessment {
-  id          Int            @id @default(autoincrement())
-  title       String
-  type        AssessmentType
-  description String
-  dueDate     DateTime
-  maxScore    Int
-  student     Student        @relation(fields: [studentId], references: [id])
-  studentId   String
-  score       Int?
-  feedback    String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id            Int              @id @default(autoincrement())
+  title         String
+  type          AssessmentType
+  description   String
+  dueDate       DateTime
+  maxScore      Int
+  student       Student          @relation(fields: [studentId], references: [id])
+  studentId     String
+  score         Int?
+  feedback      String?
+  competencies  CoreCompetency[]  // Many-to-many relation with CoreCompetency
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 }
-
+model CoreCompetency {
+  id            Int         @id @default(autoincrement())
+  name          String
+  description   String
+  curriculum    Curriculum  @relation(fields: [curriculumId], references: [id])
+  curriculumId  Int
+  assessments   Assessment[]  // Many-to-many relation with Assessment
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
 model Assignment {
   id          Int      @id @default(autoincrement())
   title       String
@@ -488,7 +613,41 @@ model Announcement {
   classId Int?
   class   Class? @relation(fields: [classId], references: [id])
 }
-
+model SpecializedProgram {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String
+  type        ProgramType
+  subjects    Subject[]
+  school      School?    @relation(fields: [schoolId], references: [id])
+  schoolId    String?
+  students    Student[]
+  teachers    Teacher[]
+  resources   Resource[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+// Resource model to track specialized equipment or materials:
+model Resource {
+  id                  Int               @id @default(autoincrement())
+  name                String
+  description         String?
+  quantity            Int
+  specializedProgram  SpecializedProgram @relation(fields: [specializedProgramId], references: [id])
+  specializedProgramId Int
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+enum ProgramType {
+  STEM
+  ROBOTICS
+  CODING
+  ARTS
+  SPORTS
+  LANGUAGE
+  ENTREPRENEURSHIP
+  OTHER
+}
 enum SchoolType {
   PUBLIC
   PRIVATE
@@ -500,7 +659,12 @@ enum SchoolCategory {
   BOARDING
   DAY_AND_BOARDING
 }
-
+enum SubjectCategory {
+  CORE
+  ELECTIVE
+  SPECIALIZED
+  EXTRACURRICULAR
+}
 enum Stage {
   PRE_PRIMARY
   PRIMARY
@@ -548,6 +712,8 @@ enum Day {
 enum AssessmentType {
   FORMATIVE
   SUMMATIVE
+  PROJECT_BASED
+  PERFORMANCE_TASK
   PRACTICAL
 }
 
@@ -586,4 +752,30 @@ enum EnrollmentStatus {
   ACTIVE
   COMPLETED
   REPEATED
+}
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CREDIT_CARD
+  MOBILE_MONEY
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum LoanStatus {
+  LOANED
+  RETURNED
+  OVERDUE
+  LOST
+}
+
+enum CurriculumType {
+  CBC
+  OLD_8_4_4
+  INTERNATIONAL
 }

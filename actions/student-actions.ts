@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { StudentSchema } from "@/schemas/student-schema";
 import { Prisma } from "@prisma/client";
 import { clerkClient } from "@clerk/nextjs/server";
+import { generateAdmissionNumber } from "@/lib/admissionNumber";
+import { getCurrentAcademicYear } from "@/lib/academic-year-util";
 
 type ResponseState = {
   success: boolean;
@@ -24,6 +26,9 @@ export const createStudent = async (
     };
   }
   try {
+
+    const admissionNumber = await generateAdmissionNumber();
+    const currentAcademicYear = await getCurrentAcademicYear();
     // Create user in Clerk
     const username = `${data.firstName}${data.lastName}`.toLowerCase();
     user = await clerkClient.users.createUser({
@@ -40,15 +45,11 @@ export const createStudent = async (
         data: {
           id: user.id,
           upi: data.upi,
-          admissionNumber: data.admissionNumber,
+          admissionNumber,
           firstName: data.firstName,
           lastName: data.lastName,
           dateOfBirth: new Date(data.dateOfBirth),
           gender: data.gender,
-          nationalId: data.nationalId,
-          parentName: data.parentName,
-          parentContact: data.parentContact,
-          parentEmail: data.parentEmail,
           address: data.address,
           classId: data.classId,
           gradeId: data.gradeId,
@@ -58,6 +59,7 @@ export const createStudent = async (
           medicalInfo: data.medicalInfo,
           specialNeeds: data.specialNeeds,
           img: data.img || null,
+          currentAcademicYearId: currentAcademicYear.id,
         },
       });
 
@@ -66,7 +68,7 @@ export const createStudent = async (
         data: {
           studentId: student.id,
           gradeId: data.gradeId,
-          academicYearId: data.academicYearId!, // Assuming this is provided in StudentSchema
+          academicYearId: currentAcademicYear.id, // Use current academic year
           classId: data.classId,
           schoolId: data.schoolId,
           enrollmentDate: new Date(data.enrollmentDate),
@@ -139,10 +141,6 @@ export const updateStudent = async (
           lastName: data.lastName,
           dateOfBirth: new Date(data.dateOfBirth),
           gender: data.gender,
-          nationalId: data.nationalId,
-          parentName: data.parentName,
-          parentContact: data.parentContact,
-          parentEmail: data.parentEmail,
           address: data.address,
           classId: data.classId,
           gradeId: data.gradeId,
@@ -191,10 +189,6 @@ export const updateStudent = async (
             lastName: data.lastName,
             dateOfBirth: new Date(data.dateOfBirth),
             gender: data.gender,
-            nationalId: data.nationalId,
-            parentName: data.parentName,
-            parentContact: data.parentContact,
-            parentEmail: data.parentEmail,
             address: data.address,
             classId: data.classId,
             gradeId: data.gradeId,
