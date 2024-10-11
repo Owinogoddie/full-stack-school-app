@@ -61,6 +61,12 @@ export const  menuItems = [
         
         {
           icon: "/lesson.png",
+          label: "Attendance",
+          href: "/list/attendance",
+          visible: ["admin", "teacher"],
+        },
+        {
+          icon: "/lesson.png",
           label: "Lessons",
           href: "/list/lessons",
           visible: ["admin", "teacher"],
