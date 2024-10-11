@@ -58,12 +58,11 @@ export const  menuItems = [
           href: "/list/subjects",
           visible: ["admin"],
         },
-        
         {
-          icon: "/lesson.png",
+          icon: "/attendance.png",
           label: "Attendance",
           href: "/list/attendance",
-          visible: ["admin", "teacher"],
+          visible: ["admin", "teacher", "student", "parent"],
         },
         {
           icon: "/lesson.png",
@@ -109,11 +108,18 @@ export const  menuItems = [
           visible: ["admin", "teacher",],
         },
         {
-          icon: "/attendance.png",
-          label: "Attendance",
-          href: "/list/attendance",
-          visible: ["admin", "teacher", "student", "parent"],
+          icon: "/result.png",
+          label: "Ranking",
+          href: "/list/results/results/ranking",
+          visible: ["admin", "teacher",],
         },
+        {
+          icon: "/result.png",
+          label: "Promotions",
+          href: "/list/promotions",
+          visible: ["admin", "teacher",],
+        },
+        
         {
           icon: "/calendar.png",
           label: "Events",

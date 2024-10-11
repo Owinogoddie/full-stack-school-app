@@ -53,6 +53,7 @@ model AcademicYear {
   currentStudents Student[]    @relation("CurrentAcademicYear") // List of current students in this academic year
   schoolId        String?
   results         Result[]
+  finalResults       FinalResult[]
   exams           Exam[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -89,6 +90,7 @@ model Grade {
   students      Student[]
   enrollments   Enrollment[]
   results       Result[]
+  finalResults       FinalResult[]
   exams         Exam[]
   learningObjectives LearningObjective[]
   createdAt     DateTime       @default(now())
@@ -112,6 +114,7 @@ model Class {
   enrollments   Enrollment[]
   events        Event[]
   results       Result[]
+  finalResults       FinalResult[]
   attendances Attendance[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -163,6 +166,8 @@ model Student {
   transferRecords       TransferRecord[]
   receivedFiles         File[]           @relation("StudentFiles")
   results               Result[]
+
+  finalResults          FinalResult[]
   bookLoans             BookLoan[]
   clubs                 Club[]
   payments              Payment[]
@@ -454,6 +459,35 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }
+model FinalResult {
+  id             Int                  @id @default(autoincrement())
+  student        Student              @relation(fields: [studentId], references: [id])
+  studentId      String
+  academicYear   AcademicYear         @relation(fields: [academicYearId], references: [id])
+  academicYearId Int
+  grade          Grade                @relation(fields: [gradeId], references: [id])
+  gradeId        Int
+  class          Class?               @relation(fields: [classId], references: [id])
+  classId        Int?
+  overallAverage Float
+  subjectResults Json
+  examResults    FinalResultExam[]
+  promoted       Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([studentId, academicYearId])
+}
+
+model FinalResultExam {
+  finalResult   FinalResult @relation(fields: [finalResultId], references: [id])
+  finalResultId Int
+  exam          Exam        @relation(fields: [examId], references: [id])
+  examId        Int
+
+  @@id([finalResultId, examId])
+  @@unique([finalResultId, examId])
+}
 
 model Exam {
   id             Int            @id @default(autoincrement())
@@ -473,6 +507,7 @@ model Exam {
   schoolId       String?
   school         School?        @relation(fields: [schoolId], references: [id])
   results        Result[]
+  finalResults FinalResultExam[]
   schedules      ExamSchedule[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
