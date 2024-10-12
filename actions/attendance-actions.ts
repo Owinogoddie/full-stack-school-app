@@ -2,24 +2,28 @@
 
 import prisma from "@/lib/prisma";
 import { AttendanceSchema } from "@/schemas/attendance-schema";
+import { AttendanceStatus } from "@prisma/client";
 
-// Type definition for current state
 type CurrentState = { success: boolean; error: boolean };
 
-// CREATE Attendance
 export const createAttendance = async (
   currentState: CurrentState,
   data: AttendanceSchema
 ) => {
   try {
-    await prisma.attendance.create({
-      data: {
-        date: data.date,
-        status: data.status, // Assuming 'present' refers to status, map it accordingly
-        studentId: data.studentId,
-        lessonId: data.lessonId,
-      },
-    });
+    // Create an attendance record for each student
+    const createdAttendances = await Promise.all(
+      data.students.map(async (student) => {
+        return prisma.attendance.create({
+          data: {
+            date: data.date,
+            status: student.status as AttendanceStatus,
+            student: { connect: { id: student.id } },
+            class: { connect: { id: parseInt(data.classId) } },
+          },
+        });
+      })
+    );
 
     return { success: true, error: false };
   } catch (err) {
@@ -28,27 +32,34 @@ export const createAttendance = async (
   }
 };
 
-// UPDATE Attendance
 export const updateAttendance = async (
   currentState: CurrentState,
   data: AttendanceSchema
 ) => {
-  if (!data.id) {
-    return { success: false, error: true };
-  }
-
   try {
-    await prisma.attendance.update({
-      where: {
-        id: data.id,
-      },
-      data: {
-        date: data.date,
-        status: data.status, // Update attendance status (like "present" or any other status)
-        studentId: data.studentId,
-        lessonId: data.lessonId,
-      },
-    });
+    // Update attendance records for each student
+    const updatedAttendances = await Promise.all(
+      data.students.map(async (student) => {
+        return prisma.attendance.upsert({
+          where: {
+            date_studentId: {
+              date: data.date,
+              studentId: student.id,
+            },
+          },
+          update: {
+            status: student.status as AttendanceStatus,
+            class: { connect: { id: parseInt(data.classId) } },
+          },
+          create: {
+            date: data.date,
+            status: student.status as AttendanceStatus,
+            student: { connect: { id: student.id } },
+            class: { connect: { id: parseInt(data.classId) } },
+          },
+        });
+      })
+    );
 
     return { success: true, error: false };
   } catch (err) {
@@ -57,7 +68,6 @@ export const updateAttendance = async (
   }
 };
 
-// DELETE Attendance
 export const deleteAttendance = async (
   currentState: CurrentState,
   data: FormData
@@ -67,7 +77,7 @@ export const deleteAttendance = async (
   try {
     await prisma.attendance.delete({
       where: {
-        id: parseInt(id), // Ensure ID is parsed as an integer
+        id: parseInt(id),
       },
     });
 
