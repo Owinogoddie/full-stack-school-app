@@ -24,6 +24,7 @@ export const createAttendance = async (
         });
       })
     );
+    console.log(createdAttendances)
 
     return { success: true, error: false };
   } catch (err) {
@@ -60,7 +61,7 @@ export const updateAttendance = async (
         });
       })
     );
-
+console.log(updatedAttendances)
     return { success: true, error: false };
   } catch (err) {
     console.error("Error updating attendance: ", err);

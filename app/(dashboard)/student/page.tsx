@@ -1,11 +1,11 @@
-
-import Announcements from "@/components/announcements";
-import BigCalendarContainer from "@/components/calendars/big-calendar-container";
-import EventCalendar from "@/components/calendars/event-calendar";
+import { Suspense } from "react";
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
+import { AppError } from "@/lib/error-handler";
+import ErrorDisplay from "@/components/ErrorDisplay";
+import StudentSchedule from "./StudentSchedule";
 
-const StudentPage = async () => {
+async function fetchStudentClassData() {
   const { userId } = auth();
 
   const classItem = await prisma.class.findMany({
@@ -14,23 +14,24 @@ const StudentPage = async () => {
     },
   });
 
-  console.log(classItem);
+  return classItem;
+}
+export default async function StudentPage() {
   return (
-    <div className="p-4 flex gap-4 flex-col xl:flex-row">
-      {/* LEFT */}
-      <div className="w-full xl:w-2/3">
-        <div className="h-full bg-white p-4 rounded-md">
-          <h1 className="text-xl font-semibold">Schedule (4A)</h1>
-          <BigCalendarContainer type="classId" id={classItem[0].id} />
-        </div>
-      </div>
-      {/* RIGHT */}
-      <div className="w-full xl:w-1/3 flex flex-col gap-8">
-        <EventCalendar />
-        <Announcements />
-      </div>
-    </div>
+    <Suspense fallback={<div>Loading...</div>}>
+      <StudentPageContent />
+    </Suspense>
   );
-};
+}
 
-export default StudentPage;
+async function StudentPageContent() {
+  try {
+    const classItem = await fetchStudentClassData();
+    return <StudentSchedule classItem={classItem} />;
+  } catch (error) {
+    if (error instanceof AppError) {
+      return <ErrorDisplay message={error.message || "Something went wrong"} />;
+    }
+    return <ErrorDisplay message="An unexpected error occurred" />;
+  }
+}

@@ -1,44 +1,45 @@
-import Announcements from "@/components/announcements";
-import BigCalendarContainer from "@/components/calendars/big-calendar-container";
-import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+// ParentPage.tsx
+import { Suspense } from 'react';
+import { AppError, handleError } from '@/lib/error-handler';
+import ErrorDisplay from '@/components/ErrorDisplay';
+import prisma from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
+import ParentStudentSchedule from './ParentStudentSchedule';
 
-const ParentPage = async () => {
+async function fetchParentStudents() {
   const { userId } = auth();
-  const currentUserId = userId;
   
-  const students = await prisma.student.findMany({
-    where: {
-      parentId: currentUserId!,
-    },
-    include: {
-      class: true,
-    },
-  });
+  try {
+    const students = await prisma.student.findMany({
+      where: {
+        parentId: userId!,
+      },
+      include: {
+        class: true,
+      },
+    });
+    return { students };
+  } catch (error) {
+    throw handleError(error);
+  }
+}
 
+export default async function ParentPage() {
   return (
-    <div className="flex-1 p-4 flex gap-4 flex-col xl:flex-row">
-      {/* LEFT */}
-      <div className="">
-        {students.map((student) => (
-          <div className="w-full xl:w-2/3" key={student.id}>
-            <div className="h-full bg-white p-4 rounded-md">
-              <h1 className="text-xl font-semibold">
-                Schedule ({student.firstName + " " + student.lastName})
-              </h1>
-              {student.class && (
-                <BigCalendarContainer type="classId" id={student.class.id.toString()} />
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-      {/* RIGHT */}
-      <div className="w-full xl:w-1/3 flex flex-col gap-8">
-        <Announcements />
-      </div>
-    </div>
+    <Suspense fallback={<div>Loading...</div>}>
+      <ParentPageContent />
+    </Suspense>
   );
-};
+}
 
-export default ParentPage;
+async function ParentPageContent() {
+  try {
+    const { students } = await fetchParentStudents();
+    return <ParentStudentSchedule students={students} />;
+  } catch (error) {
+    if (error instanceof AppError) {
+      return <ErrorDisplay message={error?.message || 'Something went wrong'} />;
+    }
+    return <ErrorDisplay message="An unexpected error occurred" />;
+  }
+}
