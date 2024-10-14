@@ -1,40 +1,39 @@
-import React from 'react';
-import prisma from "@/lib/prisma";
-import BigCalendar from "./big-calendar";
-import { adjustScheduleToCurrentWeek } from "@/lib/utils";
+'use client'
+import React, { useEffect, useState } from 'react';
+import BigCalendar from './big-calendar';
+import { adjustScheduleToCurrentWeek } from '@/lib/utils';
 import moment from 'moment';
+import { getLessons } from '@/actions/lesson-actions';
 
 interface BigCalendarContainerProps {
-  type: "teacherId" | "classId";
+  type: 'teacherId' | 'classId';
   id: string | number;
 }
 
-const BigCalendarContainer: React.FC<BigCalendarContainerProps> = async ({ type, id }) => {
-  // Fetch data from the database
-  const dataRes = await prisma.lesson.findMany({
-    where: {
-      ...(type === "teacherId"
-        ? { teacherId: id as string }
-        : { classId: parseInt(id as string, 10) }),
-    },
-  });
+const BigCalendarContainer: React.FC<BigCalendarContainerProps> = ({ type, id }) => {
+  const [schedule, setSchedule] = useState<any>([]);
 
-  // console.log("Raw data from database:", dataRes);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const dataRes = await getLessons(type, id);
 
-  // Map the data and manually adjust times by subtracting 3 hours from UTC
-  const data = dataRes.map((lesson) => ({
-    title: lesson.name,
-    start: moment.utc(lesson.startTime).subtract(3, 'hours').toDate(), // Subtract 3 hours from UTC
-    end: moment.utc(lesson.endTime).subtract(3, 'hours').toDate(),    // Subtract 3 hours from UTC
-    day: lesson.day,
-  }));
+        const adjustedData = dataRes.map((lesson: any) => ({
+          title: lesson.title,
+          start: moment.utc(lesson.start).subtract(3, 'hours').toDate(),
+          end: moment.utc(lesson.end).subtract(3, 'hours').toDate(),
+          day: lesson.day,
+        }));
 
-  // console.log("Data after manual time adjustment:", data);
+        const scheduleData = adjustScheduleToCurrentWeek(adjustedData);
+        setSchedule(scheduleData);
+      } catch (error) {
+        console.error('Failed to fetch data', error);
+      }
+    };
 
-  // Adjust the schedule to align with the current week
-  const schedule = adjustScheduleToCurrentWeek(data);
-
-  // console.log("Schedule after adjustment:", schedule);
+    fetchData();
+  }, [type, id]);
 
   return (
     <div className="h-[600px]">

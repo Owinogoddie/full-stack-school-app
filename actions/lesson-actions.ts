@@ -172,3 +172,21 @@ export const deleteLesson = async (
     return { success: false, error: true, message: "Failed to delete lesson." };
   }
 };
+export async function getLessons(type: "teacherId" | "classId", id: string | number) {
+  const dataRes = await prisma.lesson.findMany({
+    where: {
+      ...(type === "teacherId"
+        ? { teacherId: id as string }
+        : { classId: parseInt(id as string, 10) }),
+    },
+  });
+
+  const lessons = dataRes.map((lesson) => ({
+    title: lesson.name,
+    start: lesson.startTime,
+    end: lesson.endTime,
+    day: lesson.day,
+  }));
+
+  return lessons;
+}
