@@ -3,15 +3,11 @@ import { AppError, handleError } from '@/lib/error-handler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Prisma } from "@prisma/client";
 import AnnouncementList from './AnnouncementList';
-import { auth } from "@clerk/nextjs/server";
+import { Prisma } from "@prisma/client";
+import { auth } from '@clerk/nextjs/server';
 
-async function fetchAnnouncements(searchParams: { [key: string]: string | undefined }) {
-  const { userId, sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  const currentUserId = userId;
-
+async function fetchAnnouncements(searchParams: { [key: string]: string | undefined }, currentUserId: string, role: string | undefined) {
   const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
@@ -31,6 +27,7 @@ async function fetchAnnouncements(searchParams: { [key: string]: string | undefi
     }
   }
 
+  // ROLE CONDITIONS
   const roleConditions = {
     teacher: { lessons: { some: { teacherId: currentUserId! } } },
     student: { students: { some: { id: currentUserId! } } },
@@ -57,7 +54,7 @@ async function fetchAnnouncements(searchParams: { [key: string]: string | undefi
       prisma.announcement.count({ where: query }),
     ]);
 
-    return { data, count, role };
+    return { data, count };
   } catch (error) {
     throw handleError(error);
   }
@@ -68,21 +65,18 @@ export default async function AnnouncementListPage({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <AnnouncementListContent searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function AnnouncementListContent({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | undefined };
-}) {
   try {
-    const { data, count, role } = await fetchAnnouncements(searchParams);
-    return <AnnouncementList data={data} count={count} searchParams={searchParams} role={role} />;
+    const { userId, sessionClaims } = await auth();
+    const role = (sessionClaims?.metadata as { role?: string })?.role;
+    const currentUserId = userId || '';
+
+    const { data, count } = await fetchAnnouncements(searchParams, currentUserId, role);
+    
+    return (
+      <Suspense fallback={<div>Loading...</div>}>
+        <AnnouncementList data={data} count={count} searchParams={searchParams} />
+      </Suspense>
+    );
   } catch (error) {
     if (error instanceof AppError) {
       return <ErrorDisplay message={error?.message || "Something went wrong"} />;

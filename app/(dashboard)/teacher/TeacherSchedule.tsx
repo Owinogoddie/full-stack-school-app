@@ -1,12 +1,9 @@
-"use client";
+import Announcements from '@/components/announcements';
+import BigCalendarContainer from '@/components/calendars/big-calendar-container';
+import { auth } from '@clerk/nextjs/server';
 
-import Announcements from "@/components/announcements";
-import BigCalendarContainer from "@/components/calendars/big-calendar-container";
-import { useSession } from "@clerk/nextjs";
-
-const TeacherSchedule: React.FC = () => {
-  const { session } = useSession();
-  const userId = session?.user?.id;
+const TeacherSchedule = async () => {
+  const { userId } = auth();
 
   return (
     <div className="flex-1 p-4 flex gap-4 flex-col xl:flex-row">

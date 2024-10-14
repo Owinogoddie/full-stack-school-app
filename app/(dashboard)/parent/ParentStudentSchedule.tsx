@@ -1,7 +1,3 @@
-// ParentStudentSchedule.tsx
-'use client';
-
-import React from 'react';
 import Announcements from '@/components/announcements';
 import BigCalendarContainer from '@/components/calendars/big-calendar-container';
 import { Student } from '@prisma/client';
@@ -10,7 +6,7 @@ interface ParentStudentScheduleProps {
   students: (Student & { class: { id: string | number } | null })[];
 }
 
-const ParentStudentSchedule: React.FC<ParentStudentScheduleProps> = ({ students }) => {
+const ParentStudentSchedule = async ({ students }: ParentStudentScheduleProps) => {
   return (
     <div className="flex-1 p-4 flex gap-4 flex-col xl:flex-row">
       {/* LEFT */}
