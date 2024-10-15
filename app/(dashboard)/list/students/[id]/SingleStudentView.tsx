@@ -8,7 +8,7 @@ import Performance from "@/components/charts/perfomance-chart";
 import ClientOnlyComponent from "@/components/client-only-component";
 import FormContainer from "@/components/form-container";
 import StudentAttendanceCard from "@/components/student-attendance-card";
-import { Class, Student, Grade, School, Parent } from "@prisma/client";
+import { Class, Student, Grade, School, Parent, StudentCategory } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -17,6 +17,7 @@ type StudentWithRelations = Student & {
   grade: Grade;
   school: School | null;
   parent: Parent | null;
+  studentCategories: StudentCategory[];
 };
 
 interface SingleStudentViewProps {
@@ -73,6 +74,17 @@ const SingleStudentView: React.FC<SingleStudentViewProps> = ({ student, role }) 
                   <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                     <Image src="/phone.png" alt="" width={14} height={14} />
                     <span>{student.parent?.phone || "N/A"}</span>
+                  </div>
+                </div>
+                   {/* Student Categories */}
+                   <div className="mt-2">
+                  <h2 className="text-sm font-semibold">Categories:</h2>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {student.studentCategories.map((category) => (
+                      <span key={category.id} className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        {category.name}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>

@@ -1,22 +1,29 @@
-import prisma from "@/lib/prisma";
+"use client";
 
-const StudentAttendanceCard = async ({ id }: { id: string }) => {
-  const attendance = await prisma.attendance.findMany({
-    where: {
-      studentId: id,
-      date: {
-        gte: new Date(new Date().getFullYear(), 0, 1),
-      },
-    },
+import { useEffect, useState } from "react";
+import { getStudentAttendance } from "@/actions/attendance-actions";
+
+interface StudentAttendanceCardProps {
+  id: string;
+}
+
+const StudentAttendanceCard: React.FC<StudentAttendanceCardProps> = ({ id }) => {
+  const [attendanceData, setAttendanceData] = useState<{ percentage: string }>({
+    percentage: "-",
   });
 
-  const totalDays = attendance.length;
-  const presentDays = attendance.filter((day) => day.status === 'PRESENT').length;
-  const percentage = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(1) : '-';
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      const data = await getStudentAttendance(id);
+      setAttendanceData({ percentage: data.percentage });
+    };
+
+    fetchAttendance();
+  }, [id]);
 
   return (
     <div className="">
-      <h1 className="text-xl font-semibold">{percentage}%</h1>
+      <h1 className="text-xl font-semibold">{attendanceData.percentage}%</h1>
       <span className="text-sm text-gray-400">Attendance</span>
     </div>
   );

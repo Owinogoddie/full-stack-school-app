@@ -26,7 +26,6 @@ export const createStudent = async (
     };
   }
   try {
-
     const admissionNumber = await generateAdmissionNumber();
     const currentAcademicYear = await getCurrentAcademicYear();
     // Create user in Clerk
@@ -60,6 +59,9 @@ export const createStudent = async (
           specialNeeds: data.specialNeeds,
           img: data.img || null,
           currentAcademicYearId: currentAcademicYear.id,
+          studentCategories: {
+            connect: data.studentCategories?.map(id => ({ id })) || [],
+          },
         },
       });
 
@@ -68,7 +70,7 @@ export const createStudent = async (
         data: {
           studentId: student.id,
           gradeId: data.gradeId,
-          academicYearId: currentAcademicYear.id, // Use current academic year
+          academicYearId: currentAcademicYear.id,
           classId: data.classId,
           schoolId: data.schoolId,
           enrollmentDate: new Date(data.enrollmentDate),
@@ -115,7 +117,10 @@ export const updateStudent = async (
     // Fetch original student data for potential rollback
     originalStudent = await prisma.student.findUnique({
       where: { id: data.id },
-      include: { enrollments: { orderBy: { createdAt: 'desc' }, take: 1 } },
+      include: { 
+        enrollments: { orderBy: { createdAt: 'desc' }, take: 1 },
+        studentCategories: true,
+      },
     });
 
     if (!originalStudent) {
@@ -150,6 +155,9 @@ export const updateStudent = async (
           medicalInfo: data.medicalInfo,
           specialNeeds: data.specialNeeds,
           img: data.img || null,
+          studentCategories: {
+            set: data.studentCategories?.map((id: string) => ({ id })) || [],
+          },
         },
       });
 

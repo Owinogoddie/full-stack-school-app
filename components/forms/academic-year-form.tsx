@@ -13,7 +13,7 @@ import {
   AcademicYearSchema,
   academicYearSchema,
 } from "@/schemas/academic-year-schema";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 
 type ResponseState = {
   success: boolean;
@@ -32,19 +32,35 @@ const AcademicYearForm = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
   const schema = academicYearSchema;
+  const formatDate = (date: Date | string) => {
+    if (typeof date === 'string') {
+      return date.split('T')[0];
+    }
+    return date.toISOString().split('T')[0];
+  };
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<AcademicYearSchema>({
     resolver: zodResolver(schema),
     defaultValues: {
       ...data,
-
-      startDate: data?.startDate?.toISOString().split("T")[0],
-      endDate: data?.endDate?.toISOString().split("T")[0],
+      startDate: data?.startDate ? formatDate(data.startDate) : '',
+      endDate: data?.endDate ? formatDate(data.endDate) : '',
+      terms: data?.terms?.map((term: any) => ({
+        ...term,
+        startDate: formatDate(term.startDate),
+        endDate: formatDate(term.endDate),
+      })) || [{ name: "", startDate: "", endDate: "" }],
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "terms",
   });
 
   const [state, setState] = useState<ResponseState>({
@@ -113,7 +129,6 @@ const AcademicYearForm = ({
         fullWidth
       />
 
-      {/* Checkbox for currentAcademicYear */}
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
@@ -121,6 +136,53 @@ const AcademicYearForm = ({
           id="currentAcademicYear"
         />
         <label htmlFor="currentAcademicYear">Current Academic Year</label>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Terms</h2>
+        {fields.map((field, index) => (
+          <div key={field.id} className="mb-4 p-4 border rounded">
+            <InputField
+              label={`Term ${index + 1} Name`}
+              name={`terms.${index}.name`}
+              register={register}
+              error={errors.terms?.[index]?.name}
+              fullWidth
+            />
+            <InputField
+              label={`Term ${index + 1} Start Date`}
+              type="date"
+              name={`terms.${index}.startDate`}
+              register={register}
+              error={errors.terms?.[index]?.startDate}
+              fullWidth
+            />
+            <InputField
+              label={`Term ${index + 1} End Date`}
+              type="date"
+              name={`terms.${index}.endDate`}
+              register={register}
+              error={errors.terms?.[index]?.endDate}
+              fullWidth
+            />
+            <button
+              type="button"
+              onClick={() => remove(index)}
+              className="mt-2 bg-red-500 text-white p-2 rounded"
+            >
+              Remove Term
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() =>
+            append({ name: "", startDate: new Date(), endDate: new Date() })
+          }
+          className="mt-2 bg-green-500 text-white p-2 rounded"
+        >
+          Add Term
+        </button>
       </div>
 
       {data && (
@@ -134,7 +196,6 @@ const AcademicYearForm = ({
         />
       )}
 
-      {/* Error Display */}
       {state.error && (
         <div className="mt-4 p-4 border border-red-300 rounded-md bg-red-50">
           <h2 className="text-red-600 font-semibold">Error:</h2>
@@ -154,7 +215,6 @@ const AcademicYearForm = ({
         </div>
       )}
 
-      {/* Submission Button */}
       <button
         type="submit"
         className="bg-blue-400 text-white p-2 rounded-md relative"

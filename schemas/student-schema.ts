@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const studentSchema = z.object({
-  id: z.string().uuid().optional(),
   upi: z.string(),
+  admissionNumber: z.string().optional(),
   firstName: z.string().min(1, { message: "First name is required!" }),
   lastName: z.string().min(1, { message: "Last name is required!" }),
   password: z
@@ -21,7 +21,8 @@ export const studentSchema = z.object({
   enrollmentDate: z.coerce.date(),
   medicalInfo: z.string().optional(),
   specialNeeds: z.string().optional(),
-  img: z.string().optional()
+  img: z.string().optional(),
+  studentCategories: z.array(z.string()).optional(),
 });
 
 export const updateStudentSchema = studentSchema.extend({

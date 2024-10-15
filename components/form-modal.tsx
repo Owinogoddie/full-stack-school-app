@@ -24,6 +24,10 @@ import { deleteAcademicYear } from "@/actions/academic-year-actions";
 import { deleteDepartment } from "@/actions/department-actions";
 import { deleteGradeScale } from "@/actions/grade-scale-actions";
 import { deleteExamSchedule } from "@/actions/exam-schedule";
+import { deleteStudentCategory } from "@/actions/student-category-actions";
+import { deleteFeeType } from "@/actions/fee-type-actions";
+import { deleteTerm } from "@/actions/term-actions";
+import { deleteFeeTemplate } from "@/actions/feetemplate-actions";
 
 const deleteActionMap = {
   subject: deleteSubject,
@@ -43,10 +47,18 @@ const deleteActionMap = {
   department: deleteDepartment,
   gradeScale:deleteGradeScale,
   examSchedule:deleteExamSchedule,
+  studentCategory:deleteStudentCategory,
+  feeType:deleteFeeType,
+  term:deleteTerm,
+  feeTemplate:deleteFeeTemplate
+
 };
 
 // USE LAZY LOADING
-
+// studentCategory
+// feeType
+// term
+// feeTemplate
 // import TeacherForm from "./forms/TeacherForm";
 // import StudentForm from "./forms/StudentForm";
 
@@ -99,6 +111,18 @@ const GradeScaleForm = dynamic(() => import("./forms/grade-scale-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const ExamScheduleForm = dynamic(() => import("./forms/exam-schedule-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const TermForm = dynamic(() => import("./forms/term-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const FeeTemplateForm = dynamic(() => import("./forms/fee-template-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const FeeTypeForm = dynamic(() => import("./forms/fee-type-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const StudedntCategoryForm = dynamic(() => import("./forms/student-category-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -230,6 +254,35 @@ const forms: {
   ),
   examSchedule: (setOpen, type, data,relatedData) => (
     <ExamScheduleForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  term: (setOpen, type, data,relatedData) => (
+    <TermForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />),
+  studentCategory: (setOpen, type, data) => (
+    <StudedntCategoryForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+    />
+  ),
+    
+  feeType: (setOpen, type, data) => (
+    <FeeTypeForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+    />),
+    feeTemplate: (setOpen, type, data,relatedData) => (
+    <FeeTemplateForm
       type={type}
       data={data}
       setOpen={setOpen}

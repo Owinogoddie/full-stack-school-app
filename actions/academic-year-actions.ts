@@ -1,5 +1,6 @@
 'use server'
-import prisma from "@/lib/prisma";
+
+import prisma  from "@/lib/prisma";
 import { AcademicYearSchema } from "@/schemas/academic-year-schema";
 
 type ResponseState = {
@@ -9,26 +10,36 @@ type ResponseState = {
   messages?: string[];
 };
 
-// Create Academic Year
 export const createAcademicYear = async (data: AcademicYearSchema): Promise<ResponseState> => {
   try {
     // If the new academic year is set as current, set others to not current
     if (data.currentAcademicYear) {
       await prisma.academicYear.updateMany({
-        where: { currentAcademicYear: true }, // Find current academic years
-        data: { currentAcademicYear: false }, // Set them to false
+        where: { currentAcademicYear: true },
+        data: { currentAcademicYear: false },
       });
     }
 
-    // Create the new academic year
+    // Create the new academic year with terms
     await prisma.academicYear.create({
       data: {
         year: data.year,
         startDate: data.startDate,
         endDate: data.endDate,
-        currentAcademicYear: data.currentAcademicYear, // New field
+        currentAcademicYear: data.currentAcademicYear,
+        terms: {
+          create: data.terms.map((term) => ({
+            name: term.name,
+            startDate: term.startDate,
+            endDate: term.endDate,
+          })),
+        },
+      },
+      include: {
+        terms: true,
       },
     });
+
     return { success: true, error: false, message: "Academic year created successfully" };
   } catch (err) {
     console.error(err);
@@ -36,7 +47,6 @@ export const createAcademicYear = async (data: AcademicYearSchema): Promise<Resp
   }
 };
 
-// Update Academic Year
 export const updateAcademicYear = async (data: AcademicYearSchema): Promise<ResponseState> => {
   try {
     if (!data.id) {
@@ -46,52 +56,59 @@ export const updateAcademicYear = async (data: AcademicYearSchema): Promise<Resp
     // If the updated academic year is set as current, set others to not current
     if (data.currentAcademicYear) {
       await prisma.academicYear.updateMany({
-        where: { currentAcademicYear: true, id: { not: data.id } }, // Find current years excluding the one being updated
-        data: { currentAcademicYear: false }, // Set them to false
+        where: { currentAcademicYear: true, id: { not: data.id } },
+        data: { currentAcademicYear: false },
       });
     }
 
-    // Update the academic year
+    // Update the academic year and its terms
     await prisma.academicYear.update({
       where: { id: data.id },
       data: {
         year: data.year,
         startDate: data.startDate,
         endDate: data.endDate,
-        currentAcademicYear: data.currentAcademicYear, // New field
+        currentAcademicYear: data.currentAcademicYear,
+        terms: {
+          deleteMany: {}, // Delete existing terms
+          create: data.terms.map((term) => ({
+            name: term.name,
+            startDate: term.startDate,
+            endDate: term.endDate,
+          })),
+        },
+      },
+      include: {
+        terms: true,
       },
     });
+
     return { success: true, error: false, message: "Academic year updated successfully" };
   } catch (err) {
     console.error(err);
     return { success: false, error: true, message: "Failed to update academic year" };
   }
 };
-type CurrentState = { success: boolean; error: boolean };
-export const deleteAcademicYear = async (
-  currentState: CurrentState,
-  data: FormData
-) => {
-  const id = data.get("id") as string; // Extract the ID from the FormData
+
+export const deleteAcademicYear = async (id: number): Promise<ResponseState> => {
   try {
-    // Optional: Check if the academic year exists before attempting to delete
+    // Check if the academic year exists before attempting to delete
     const academicYear = await prisma.academicYear.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!academicYear) {
-      return { success: false, error: true }; // Return an error if the academic year doesn't exist
+      return { success: false, error: true, message: "Academic year not found" };
     }
 
+    // Delete the academic year and its associated terms
     await prisma.academicYear.delete({
-      where: {
-        id: parseInt(id), // Delete by ID
-      },
+      where: { id },
     });
 
-    return { success: true, error: false }; // Successful deletion
+    return { success: true, error: false, message: "Academic year deleted successfully" };
   } catch (err) {
-    console.log(err);
-    return { success: false, error: true }; // Error handling
+    console.error(err);
+    return { success: false, error: true, message: "Failed to delete academic year" };
   }
 };

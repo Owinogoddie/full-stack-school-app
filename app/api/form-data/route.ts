@@ -74,6 +74,7 @@ export async function GET(request: Request) {
         });
         const clases = await prisma.class.findMany();
         const academicYears = await prisma.academicYear.findMany();
+        const studentCategories  = await prisma.studentCategory.findMany();
         const studentParents = await prisma.parent.findMany({
           // Updated variable name
           select: {
@@ -87,6 +88,7 @@ export async function GET(request: Request) {
           grades: studentGrades,
           parents: studentParents,
           academicYears,
+          studentCategories
         };
         break;
 
@@ -225,6 +227,51 @@ export async function GET(request: Request) {
         relatedData = {
           exams: examScheduleExams,
           subjects: examScheduleSubjects,
+        };
+        break;
+
+        case "studentCategory":
+        // No related data needed for student category
+        break;
+
+      case "feeType":
+        // No related data needed for fee type
+        break;
+        case "feeTemplate":
+          const feeTemplateGrades = await prisma.grade.findMany({
+            select: { id: true, levelName: true },
+          });
+          const feeTemplateClasses = await prisma.class.findMany({
+            select: { id: true, name: true, gradeId: true },
+          });
+          const feeTemplateAcademicYears = await prisma.academicYear.findMany({ // Add this line
+            select: { id: true, year: true },
+          });
+          const feeTemplateTerms = await prisma.term.findMany({
+            select: { id: true, name: true, academicYearId: true }, // Update this line
+          });
+          const feeTemplateTypes = await prisma.feeType.findMany({
+            select: { id: true, name: true },
+          });
+          const feeTemplateCategories = await prisma.studentCategory.findMany({
+            select: { id: true, name: true },
+          });
+          relatedData = {
+            grades: feeTemplateGrades,
+            classes: feeTemplateClasses,
+            academicYears: feeTemplateAcademicYears, // Add this line
+            terms: feeTemplateTerms,
+            feeTypes: feeTemplateTypes,
+            studentCategories: feeTemplateCategories,
+          };
+          break;
+        case "term":
+        const termAcademicYears = await prisma.academicYear.findMany({
+          select: { id: true, year: true },
+        });
+        // console.log(termAcademicYears)
+        relatedData = {
+          academicYears: termAcademicYears,
         };
         break;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import InputField from "../input-field";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import { createStudent, updateStudent } from "@/actions/student-actions";
 import SelectField from "../select-field";
 import Image from "next/image";
 import { CldUploadWidget } from "next-cloudinary";
+import MultiSelect from "../multi-select";
 
 type ResponseState = {
   success: boolean;
@@ -35,6 +36,7 @@ const StudentForm = ({
     register,
     handleSubmit,
     setValue,
+    control,
     watch,
     formState: { errors, isSubmitting },
     setError,
@@ -48,6 +50,7 @@ const StudentForm = ({
       classId: data?.classId?.toString(),
       gradeId: data?.gradeId?.toString(),
       parentId: data?.parentId?.toString(),
+      studentCategories: data?.studentCategories || [],
     },
   });
 
@@ -120,8 +123,8 @@ const StudentForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  const { parents, grades, classes } = relatedData;
-
+  const { parents, grades, classes,studentCategories  } = relatedData;
+// console.log(studentCategories)
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
@@ -299,6 +302,27 @@ const StudentForm = ({
             placeholder="Enter Special Needs"
           />
         </div>
+        <div>
+        <span className="text-xs text-gray-400 font-medium">Student Categories</span>
+        <div className="flex flex-wrap gap-4">
+        <Controller
+          name="studentCategories"
+          control={control}
+          render={({ field }) => (
+            <MultiSelect
+            label="Student Categories"
+            options={studentCategories.map((category: any) => ({
+              id: category.id.toString(),
+              label: category.name,
+            }))}
+              value={field.value || []}
+              onChange={(newValue) => field.onChange(newValue)}
+              error={errors.studentCategories}
+            />
+          )}
+        />
+      </div>
+      </div>
         <div className="flex flex-col gap-2 w-full md:w-1/2">
           <label className="text-xs text-gray-500">Photo</label>
           <CldUploadWidget

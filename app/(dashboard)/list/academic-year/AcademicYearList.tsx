@@ -5,12 +5,15 @@ import FormContainer from "@/components/form-container";
 import Pagination from "@/components/pagination";
 import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
-import { AcademicYear, Enrollment } from "@prisma/client";
+import { AcademicYear, Enrollment, Term } from "@prisma/client";
 import Image from "next/image";
 import ClientOnlyComponent from "@/components/client-only-component";
 import { useSession } from "@clerk/nextjs";
 
-type AcademicYearListType = AcademicYear & { students: Enrollment[] };
+type AcademicYearListType = AcademicYear & { 
+  students: Enrollment[];
+  terms: Term[];
+};
 
 interface AcademicYearListProps {
   data: AcademicYearListType[];
@@ -41,6 +44,11 @@ const AcademicYearList: React.FC<AcademicYearListProps> = ({ data, count, search
       accessor: "isCurrentYear",
       className: "hidden md:table-cell",
     },
+    {
+      header: "Terms",
+      accessor: "terms",
+      className: "hidden md:table-cell",
+    },
     ...(role === "admin"
       ? [
           {
@@ -63,6 +71,13 @@ const AcademicYearList: React.FC<AcademicYearListProps> = ({ data, count, search
       </td>
       <td className="hidden md:table-cell p-4">{item.students?.length || 0}</td>
       <td className="hidden md:table-cell p-4">{item.currentAcademicYear ? "Yes" : "No"}</td>
+      <td className="hidden md:table-cell p-4">
+        {item.terms.map((term, index) => (
+          <div key={term.id}>
+            Term {index + 1}: {term.name} ({new Date(term.startDate).toLocaleDateString()} - {new Date(term.endDate).toLocaleDateString()})
+          </div>
+        ))}
+      </td>
       {role === "admin" && (
         <td className="p-4">
           <ClientOnlyComponent>

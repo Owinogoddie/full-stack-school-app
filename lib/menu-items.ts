@@ -15,9 +15,21 @@ export const  menuItems = [
           visible: ["admin"],
         },
         {
+          icon: "/calendar.png",
+          label: "Terms",
+          href: "/list/terms",
+          visible: ["admin"],
+        },
+        {
           icon: "/subject.png",
           label: "Departments",
           href: "/list/departments",
+          visible: ["admin"],
+        },
+        {
+          icon: "/message.png",
+          label: "Fees",
+          href: "/fees",
           visible: ["admin"],
         },
         {
@@ -30,6 +42,12 @@ export const  menuItems = [
           icon: "/class.png",
           label: "Classes",
           href: "/list/classes",
+          visible: ["admin", "teacher"],
+        },
+        {
+          icon: "/student.png",
+          label: "Student Categories",
+          href: "/list/student-categories",
           visible: ["admin", "teacher"],
         },
         

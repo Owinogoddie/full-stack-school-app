@@ -21,7 +21,11 @@ export type FormContainerProps = {
   | "department"
   | "examSchedule"
   | "gradeScale"
-  | "academicYear";
+  | "academicYear"
+  | "studentCategory"
+  | "feeType"
+  | "term"
+  | "feeTemplate";
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;

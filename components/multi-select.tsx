@@ -12,6 +12,7 @@ interface MultiSelectProps {
   value: string[];
   onChange: (value: string[]) => void;
   error?: { message?: string };
+  disabled?: boolean;
 }
 
 const MultiSelect: React.FC<MultiSelectProps> = ({
@@ -20,12 +21,12 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   value,
   onChange,
   error,
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -61,8 +62,11 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       <div className="relative">
         <button
           type="button"
-          className="relative py-3 px-4 w-full text-left cursor-pointer bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          onClick={() => setIsOpen(!isOpen)}
+          className={`relative py-3 px-4 w-full text-left cursor-pointer bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+          }`}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
         >
           {selectedOptions.length > 0
             ? selectedOptions.map((option) => option.label).join(", ")
@@ -72,7 +76,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
           </div>
         </button>
 
-        {isOpen && (
+        {isOpen && !disabled && (
           <div className="absolute z-10 mt-2 w-full max-h-60 overflow-auto bg-white border border-gray-200 rounded-lg shadow-lg">
             <div className="sticky top-0 bg-white p-2">
               <div className="relative">

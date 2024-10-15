@@ -1,24 +1,23 @@
-import prisma from "@/lib/prisma";
+// UserCard.tsx
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
+import { getUserCount } from "@/actions/user-actions";
 
 type UserType = "admin" | "teacher" | "student" | "parent";
 
-const UserCard = async ({ type }: { type: UserType }) => {
-  const modelMap: Record<UserType, {
-    count: () => Promise<number>
-  }> = {
-    admin: prisma.admin,
-    teacher: prisma.teacher,
-    student: prisma.student,
-    parent: prisma.parent,
-  };
+const UserCard: React.FC<{ type: UserType }> = ({ type }) => {
+  const [count, setCount] = useState<number>(0);
 
-  let count = 0;
-  try {
-    count = await modelMap[type].count();
-  } catch (error) {
-    console.error(`Error counting ${type}:`, error);
-  }
+  useEffect(() => {
+    const fetchUserCount = async () => {
+      const userCount = await getUserCount(type);
+      setCount(userCount);
+    };
+
+    fetchUserCount();
+  }, [type]);
 
   return (
     <div className="rounded-2xl odd:bg-lamaPurple even:bg-lamaYellow p-4 flex-1 min-w-[130px]">

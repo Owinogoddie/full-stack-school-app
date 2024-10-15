@@ -19,6 +19,7 @@ async function fetchStudentData(id: string) {
         grade: true,
         school: true,
         parent: true,
+        studentCategories: true,
       },
     });
 

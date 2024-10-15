@@ -32,7 +32,11 @@ model School {
   departments   Department[]
   enrollments   Enrollment[]
   curricula    Curriculum[]
-  fees         Fee[]
+ 
+  feeTypes      FeeType[]
+  feeTemplates  FeeTemplate[]
+  
+  studentCategories StudentCategory[]
   books        Book[]
   clubs        Club[]
   transfersFrom TransferRecord[] @relation("FromSchool")
@@ -43,20 +47,37 @@ model School {
 }
 
 model AcademicYear {
-  id              Int          @id @default(autoincrement())
-  year            String       // e.g., "2023-2024"
-  startDate       DateTime
-  endDate         DateTime
-  currentAcademicYear Boolean   @default(false)  // New field
-  students        Enrollment[] // Students enrolled during this academic year
-  school          School?      @relation(fields: [schoolId], references: [id])
-  currentStudents Student[]    @relation("CurrentAcademicYear") // List of current students in this academic year
-  schoolId        String?
-  results         Result[]
-  finalResults       FinalResult[]
-  exams           Exam[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id                   Int           @id @default(autoincrement())
+  year                 String
+  startDate            DateTime
+  endDate              DateTime
+  currentAcademicYear  Boolean       @default(false)
+  students             Enrollment[]
+  school               School?       @relation(fields: [schoolId], references: [id])
+  currentStudents      Student[]     @relation("CurrentAcademicYear")
+  schoolId             String?
+  results              Result[]
+  finalResults         FinalResult[]
+  exams                Exam[]
+  terms                Term[]
+  feeTemplates         FeeTemplate[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+
+model Term {
+  id             String       @id @default(uuid())
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  academicYearId Int
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  
+  feeTemplates FeeTemplate[]
+  feeItems     FeeItem[]
+  
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 }
 
 model Enrollment {
@@ -93,6 +114,7 @@ model Grade {
   finalResults       FinalResult[]
   exams         Exam[]
   learningObjectives LearningObjective[]
+  feeTemplates      FeeTemplate[]  // Many-to-many relation
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -116,6 +138,7 @@ model Class {
   results       Result[]
   finalResults       FinalResult[]
   attendances Attendance[]
+  feeTemplates FeeTemplate[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -166,15 +189,29 @@ model Student {
   transferRecords       TransferRecord[]
   receivedFiles         File[]           @relation("StudentFiles")
   results               Result[]
+  feeItems         FeeItem[]
+  transactions     FeeTransaction[]
+  studentCategories StudentCategory[]
 
   finalResults          FinalResult[]
   bookLoans             BookLoan[]
   clubs                 Club[]
-  payments              Payment[]
   specializedPrograms   SpecializedProgram[]
   healthRecord          HealthRecord?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
+}
+model StudentCategory {
+  id           String        @id @default(uuid())
+  name         String
+  description  String?
+  schoolId     String?
+  school       School?       @relation(fields: [schoolId], references: [id])
+  students     Student[]
+  feeTemplates FeeTemplate[]
+  
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 }
 
 model Teacher {
@@ -275,30 +312,74 @@ model LearningObjective {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-model Fee {
-  id          Int       @id @default(autoincrement())
-  name        String
-  amount      Float
-  dueDate     DateTime
-  description String?
-  school      School?    @relation(fields: [schoolId], references: [id])
-  schoolId    String?
-  payments    Payment[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+model FeeType {
+  id           String        @id @default(uuid())
+  name         String
+  description  String?
+  amount       Float?
+  schoolId     String?
+  school       School?       @relation(fields: [schoolId], references: [id])
+  feeItems     FeeItem[]
+  feeTemplates FeeTemplate[]
+  
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 }
-model Payment {
-  id        Int      @id @default(autoincrement())
-  amount    Float
-  date      DateTime
-  method    PaymentMethod
-  status    PaymentStatus
-  student   Student  @relation(fields: [studentId], references: [id])
-  studentId String
-  fee       Fee      @relation(fields: [feeId], references: [id])
-  feeId     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+model FeeTemplate {
+  id                 String           @id @default(uuid())
+  grades             Grade[]          // Many-to-many relation with Grade
+  classes            Class[]          // Many-to-many relation with Class
+ academicYearId     Int              // Change this line
+  academicYear       AcademicYear     @relation(fields: [academicYearId], references: [id]) // Add this line
+  termId             String
+  term               Term             @relation(fields: [termId], references: [id])
+  feeTypeId          String
+  feeType            FeeType          @relation(fields: [feeTypeId], references: [id])
+  studentCategories  StudentCategory[] // Many-to-many relation with StudentCategory
+  baseAmount         Float
+  schoolId           String?
+  school             School?          @relation(fields: [schoolId], references: [id])
+
+  
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+model FeeItem {
+  id              String     @id @default(uuid())
+  amount          Float      // The amount to be paid for this fee item
+  finalAmount     Float      // The final amount, which may be discounted or include penalties
+  dueDate         DateTime
+  status          FeeStatus  // Pending, Paid, Partially Paid
+  itemStatus      ItemStatus @default(ACTIVE) // Active, Future, Inactive
+  academicYear    String
+  termId          String?    // Reference to the term
+  term            Term?      @relation(fields: [termId], references: [id])
+  studentId       String     // Reference to the student who owes the fee
+  student         Student    @relation(fields: [studentId], references: [id])
+  feeTypeId       String     // Reference to the fee type
+  feeType         FeeType    @relation(fields: [feeTypeId], references: [id])
+  effectiveDate   DateTime? 
+
+  transactions    FeeTransaction[] // Payment transactions related to this fee item
+  
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+//FeeTransaction Model (Records of payments made by students)
+model FeeTransaction {
+  id          String   @id @default(uuid())
+  amount      Float    // Amount paid
+  paymentDate DateTime
+  method      String   // Payment method (e.g., cash, mobile money, bank transfer)
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  feeItemId   String
+  feeItem     FeeItem  @relation(fields: [feeItemId], references: [id])
+  status      PaymentStatus
+  
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 }
 model Book {
   id          Int        @id @default(autoincrement())
@@ -799,7 +880,16 @@ enum PaymentMethod {
   CREDIT_CARD
   MOBILE_MONEY
 }
-
+enum FeeStatus {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+}
+enum ItemStatus {
+  ACTIVE
+  FUTURE
+  INACTIVE
+}
 enum PaymentStatus {
   PENDING
   COMPLETED

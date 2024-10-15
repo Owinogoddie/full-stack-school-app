@@ -39,7 +39,7 @@ export const updateAttendance = async (
 ) => {
   try {
     // Update attendance records for each student
-    const updatedAttendances = await Promise.all(
+     await Promise.all(
       data.students.map(async (student) => {
         return prisma.attendance.upsert({
           where: {
@@ -61,7 +61,7 @@ export const updateAttendance = async (
         });
       })
     );
-console.log(updatedAttendances)
+// console.log(updatedAttendances)
     return { success: true, error: false };
   } catch (err) {
     console.error("Error updating attendance: ", err);
@@ -86,5 +86,27 @@ export const deleteAttendance = async (
   } catch (err) {
     console.error("Error deleting attendance: ", err);
     return { success: false, error: true };
+  }
+};
+
+export const getStudentAttendance = async (id: string) => {
+  try {
+    const attendance = await prisma.attendance.findMany({
+      where: {
+        studentId: id,
+        date: {
+          gte: new Date(new Date().getFullYear(), 0, 1),
+        },
+      },
+    });
+
+    const totalDays = attendance.length;
+    const presentDays = attendance.filter((day) => day.status === 'PRESENT').length;
+    const percentage = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(1) : '-';
+
+    return { totalDays, presentDays, percentage };
+  } catch (error) {
+    console.error("Error fetching attendance: ", error);
+    return { totalDays: 0, presentDays: 0, percentage: '-' };
   }
 };

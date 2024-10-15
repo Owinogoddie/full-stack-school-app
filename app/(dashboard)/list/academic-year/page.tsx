@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { AppError, handleError } from '@/lib/error-handler';
 import ErrorDisplay from '@/components/ErrorDisplay';
-import prisma from "@/lib/prisma";
+import  prisma  from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma } from "@prisma/client";
 import AcademicYearList from './AcademicYearList';
@@ -18,7 +18,7 @@ async function fetchAcademicYears(searchParams: { [key: string]: string | undefi
       { year: { contains: search, mode: 'insensitive' } },
     ];
   }
-  
+
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
@@ -48,6 +48,7 @@ async function fetchAcademicYears(searchParams: { [key: string]: string | undefi
         where: query,
         include: {
           students: true,
+          terms: true,
         },
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),

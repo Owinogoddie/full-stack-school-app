@@ -24,72 +24,31 @@
 
 // // Usage example
 // async function main() {
-//     const subjects = [
-//       {
-//         name: "English",
-//         code: "ENG",
-//         description: "Covers language skills in English, including grammar, literature, and composition",
-//       },
-//       {
-//         name: "Kiswahili",
-//         code: "KIS",
-//         description: "Covers Swahili language skills, including grammar, composition, and literature",
-//       },
-//       {
-//         name: "Mathematics",
-//         code: "MAT",
-//         description: "Covers basic and advanced mathematics including algebra, geometry, and calculus",
-//       },
-//       {
-//         name: "Biology",
-//         code: "BIO",
-//         description: "Covers life sciences, including cell biology, ecology, genetics, and evolution",
-//       },
-//       {
-//         name: "Physics",
-//         code: "PHY",
-//         description: "Covers principles of physics, including mechanics, electricity, magnetism, and optics",
-//       },
-//       {
-//         name: "Chemistry",
-//         code: "CHE",
-//         description: "Covers chemical reactions, atomic structure, and chemical bonding",
-//       },
-//       {
-//         name: "History",
-//         code: "HIS",
-//         description: "Covers historical events, both local and global, as well as social studies",
-//       },
-//       {
-//         name: "Geography",
-//         code: "GEO",
-//         description: "Covers physical and human geography, environmental science, and map reading skills",
-//       },
-//       {
-//         name: "Music",
-//         code: "MUS",
-//         description: "Covers music theory, composition, and performance",
-//       },
-//       {
-//         name: "Art and Craft",
-//         code: "ART",
-//         description: "Covers visual arts, painting, drawing, and design",
-//       },
-//       {
-//         name: "Computer Science",
-//         code: "CSC",
-//         description: "Covers ICT, programming, and digital literacy skills",
-//       },
-//       {
-//         name: "Physical Education",
-//         code: "PE",
-//         description: "Covers physical fitness, sports, and health education",
-//       }
-//     ];
-  
-//     await insertData('Subject', subjects);
-//   }
-  
+//   const studentCategories = [
+//     {
+//       name: "Boarding",
+//       description: "Covers all boarding students with accommodation services",
+//     },
+//     {
+//       name: "Day Scholar",
+//       description: "Covers all day scholars without boarding services",
+//     },
+//     {
+//       name: "Special Needs",
+//       description: "Includes students with special educational needs",
+//     },
+//     {
+//       name: "Scholarship",
+//       description: "Includes students under scholarship programs",
+//     },
+//     {
+//       name: "International",
+//       description: "Covers students from international backgrounds",
+//     }
+//   ];
+
+//   await insertData('StudentCategory', studentCategories);
+// }
 
 // main()
 //   .catch((e) => {
