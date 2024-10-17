@@ -44,7 +44,6 @@ async function fetchTerms(searchParams: { [key: string]: string | undefined }) {
         where: query,
         include: {
           academicYear: true,
-          feeItems: true,
         },
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),

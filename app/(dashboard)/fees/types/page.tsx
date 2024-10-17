@@ -1,3 +1,4 @@
+// app/fee-types/page.tsx
 import { Suspense } from 'react';
 import { AppError, handleError } from '@/lib/error-handler';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -7,10 +8,15 @@ import { Prisma } from "@prisma/client";
 import FeeTypeList from './FeeTypeList';
 
 async function fetchFeeTypes(searchParams: { [key: string]: string | undefined }) {
-  const { page, search, ...queryParams } = searchParams;
+  const { page, search, schoolId, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
   const query: Prisma.FeeTypeWhereInput = {};
+
+  // Add schoolId filter if provided
+  if (schoolId) {
+    query.schoolId = schoolId;
+  }
 
   if (search) {
     query.OR = [
@@ -41,11 +47,20 @@ async function fetchFeeTypes(searchParams: { [key: string]: string | undefined }
       prisma.feeType.findMany({
         where: query,
         include: {
-          feeItems: true,
-          feeTemplates: true,
+          school: true,
+          feeTemplates: {
+            include: {
+              academicYear: true,
+              term: true,
+              exceptions: true,
+            }
+          }
         },
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),
+        orderBy: {
+          createdAt: 'desc'
+        }
       }),
       prisma.feeType.count({ where: query }),
     ]);

@@ -15,6 +15,7 @@ const menuItems = [
   { name: 'Fee Types', icon: CurrencyDollarIcon, href: '/fees/types' },
   { name: 'Student Fees', icon: UserGroupIcon, href: '/fees/student-fees' },
   { name: 'Fee Templates', icon: ClipboardDocumentListIcon, href: '/fees/templates' },
+  { name: 'Exceptions', icon: CreditCardIcon, href: '/fees/exceptions' },
   { name: 'Transactions', icon: CreditCardIcon, href: '/fees/transactions' },
   { name: 'Reports', icon: ChartBarIcon, href: '/fees/reports' },
   { name: 'Fee Settings', icon: CogIcon, href: '/fees/settings' },

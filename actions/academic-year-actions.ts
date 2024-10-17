@@ -90,8 +90,21 @@ export const updateAcademicYear = async (data: AcademicYearSchema): Promise<Resp
   }
 };
 
-export const deleteAcademicYear = async (id: number): Promise<ResponseState> => {
+export const deleteAcademicYear = async (
+  currentState: ResponseState,
+  formData: FormData
+): Promise<ResponseState> => {
   try {
+    // Get the 'id' from FormData
+    const idValue = formData.get("id");
+
+    // Ensure 'id' is not null and can be converted to a number
+    if (!idValue || typeof idValue !== "string" || isNaN(Number(idValue))) {
+      return { success: false, error: true, message: "Invalid academic year ID" };
+    }
+
+    const id = Number(idValue); // Convert to number
+
     // Check if the academic year exists before attempting to delete
     const academicYear = await prisma.academicYear.findUnique({
       where: { id },

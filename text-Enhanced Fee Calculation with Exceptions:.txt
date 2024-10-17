@@ -1,0 +1,131 @@
+interface FeeCalculation {
+  original: number;
+  adjustments: {
+    type: string;
+    amount: number;
+    reason: string;
+  }[];
+  final: number;
+}
+
+export async function calculateStudentFees(
+  studentId: string,
+  academicYearId: number,
+  termId: string
+) {
+  // Get student details
+  const student = await prisma.student.findUnique({
+    where: { id: studentId },
+    include: {
+      grade: true,
+      class: true,
+      category: true
+    }
+  });
+
+  if (!student) throw new Error("Student not found");
+
+  // Get applicable templates
+  const templates = await prisma.feeTemplate.findMany({
+    where: {
+      academicYearId,
+      termId,
+      isActive: true,
+      OR: [
+        { grades: { hasSome: [student.grade.id] } },
+        { classes: { hasSome: [student.class.id] } },
+        { studentCategories: { hasSome: [student.category.id] } }
+      ]
+    },
+    include: {
+      exceptions: {
+        where: {
+          studentId,
+          status: 'ACTIVE',
+          startDate: { lte: new Date() },
+          OR: [
+            { endDate: null },
+            { endDate: { gt: new Date() } }
+          ]
+        }
+      },
+      feeType: true
+    }
+  });
+
+  // Calculate fees for each template
+  const calculations = await Promise.all(templates.map(async template => {
+    const activeExceptions = template.exceptions;
+    let finalAmount = template.baseAmount;
+    const adjustments = [];
+
+    // Apply exceptions in order
+    for (const exception of activeExceptions) {
+      const adjustment = exception.adjustmentType === 'PERCENTAGE'
+        ? template.baseAmount * (exception.adjustmentValue / 100)
+        : exception.adjustmentValue;
+
+      adjustments.push({
+        type: exception.type,
+        amount: adjustment,
+        reason: exception.reason
+      });
+
+      finalAmount = exception.adjustmentType === 'PERCENTAGE'
+        ? finalAmount * (1 - exception.adjustmentValue / 100)
+        : finalAmount - exception.adjustmentValue;
+    }
+
+    // Get payments for this template
+    const payments = await prisma.feeTransaction.findMany({
+      where: {
+        studentId,
+        feeTemplateId: template.id,
+        academicYearId,
+        termId
+      }
+    });
+
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+
+    return {
+      templateId: template.id,
+      feeType: template.feeType,
+      calculation: {
+        original: template.baseAmount,
+        adjustments,
+        final: finalAmount
+      },
+      payments: {
+        total: totalPaid,
+        transactions: payments
+      },
+      balance: finalAmount - totalPaid
+    };
+  }));
+
+  // Calculate totals
+  const summary = calculations.reduce((sum, calc) => ({
+    totalOriginal: sum.totalOriginal + calc.calculation.original,
+    totalFinal: sum.totalFinal + calc.calculation.final,
+    totalPaid: sum.totalPaid + calc.payments.total,
+    totalBalance: sum.totalBalance + calc.balance
+  }), {
+    totalOriginal: 0,
+    totalFinal: 0,
+    totalPaid: 0,
+    totalBalance: 0
+  });
+
+  return {
+    studentInfo: {
+      id: student.id,
+      name: student.name,
+      grade: student.grade.name,
+      class: student.class.name,
+      category: student.category.name
+    },
+    calculations,
+    summary
+  };
+}

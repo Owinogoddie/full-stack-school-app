@@ -28,8 +28,19 @@ import { deleteStudentCategory } from "@/actions/student-category-actions";
 import { deleteFeeType } from "@/actions/fee-type-actions";
 import { deleteTerm } from "@/actions/term-actions";
 import { deleteFeeTemplate } from "@/actions/feetemplate-actions";
+import { deleteFeeException } from "@/actions/fee-exception-actions";
+import { deleteFeeTransaction } from "@/actions/fee-transaction-actions";
+type ResponseState = {
+  success: boolean;
+  error: boolean;
+  message?: string;
+};
+type DeleteAction = (
+  state: ResponseState,
+  formData: FormData
+) => Promise<ResponseState>;
 
-const deleteActionMap = {
+const deleteActionMap: Record<string, DeleteAction> = {
   subject: deleteSubject,
   class: deleteClass,
   teacher: deleteTeacher,
@@ -50,7 +61,9 @@ const deleteActionMap = {
   studentCategory:deleteStudentCategory,
   feeType:deleteFeeType,
   term:deleteTerm,
-  feeTemplate:deleteFeeTemplate
+  feeTemplate:deleteFeeTemplate,
+  feeException:deleteFeeException,
+  feeTransaction:deleteFeeTransaction,
 
 };
 
@@ -120,6 +133,12 @@ const FeeTemplateForm = dynamic(() => import("./forms/fee-template-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const FeeTypeForm = dynamic(() => import("./forms/fee-type-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const FeeExceptionForm = dynamic(() => import("./forms/fee-exception-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const FeeTransactionForm = dynamic(() => import("./forms/fee-exception-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const StudedntCategoryForm = dynamic(() => import("./forms/student-category-form"), {
@@ -281,8 +300,23 @@ const forms: {
       data={data}
       setOpen={setOpen}
     />),
+    
+  feeTransaction: (setOpen, type, data) => (
+    <FeeTransactionForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+    />),
     feeTemplate: (setOpen, type, data,relatedData) => (
     <FeeTemplateForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+    feeException: (setOpen, type, data,relatedData) => (
+    <FeeExceptionForm
       type={type}
       data={data}
       setOpen={setOpen}

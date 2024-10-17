@@ -5,29 +5,43 @@ import FormContainer from "@/components/form-container";
 import Pagination from "@/components/pagination";
 import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
-import { Term, AcademicYear } from "@prisma/client";
+import { FeeException, FeeTemplate, Student, FeeType, AcademicYear, Term } from "@prisma/client";
 import Image from "next/image";
 import ClientOnlyComponent from "@/components/client-only-component";
-import { useSession } from "@clerk/nextjs";
 
-type TermListType = Term & { 
-  academicYear: AcademicYear,
+type FeeExceptionList = FeeException & {
+  feeTemplate: FeeTemplate & {
+    feeType: FeeType;
+    academicYear: AcademicYear;
+    term: Term;
+  };
+  student: Student;
 };
 
-interface TermListProps {
-  data: TermListType[];
+interface FeeExceptionListProps {
+  data: FeeExceptionList[];
   count: number;
   searchParams: { [key: string]: string | undefined };
+  role: string | undefined;
 }
 
-const TermList: React.FC<TermListProps> = ({ data, count, searchParams }) => {
-  const { session } = useSession();
-  const role = session?.user?.publicMetadata?.role as string | undefined;
-
+const FeeExceptionList: React.FC<FeeExceptionListProps> = ({ data, count, searchParams, role }) => {
   const columns = [
     {
-      header: "Name",
-      accessor: "name",
+      header: "Student Name",
+      accessor: "student",
+    },
+    {
+      header: "Fee Type",
+      accessor: "feeType",
+    },
+    {
+      header: "Exception Type",
+      accessor: "type",
+    },
+    {
+      header: "Adjustment",
+      accessor: "adjustment",
     },
     {
       header: "Start Date",
@@ -38,11 +52,10 @@ const TermList: React.FC<TermListProps> = ({ data, count, searchParams }) => {
       accessor: "endDate",
     },
     {
-      header: "Academic Year",
-      accessor: "academicYear",
-      className: "hidden md:table-cell",
+      header: "Status",
+      accessor: "status",
     },
-    ...(role === "admin"
+    ...(role === "admin" || role === "teacher"
       ? [
           {
             header: "Actions",
@@ -52,23 +65,23 @@ const TermList: React.FC<TermListProps> = ({ data, count, searchParams }) => {
       : []),
   ];
 
-  const renderRow = (item: TermListType) => (
+  const renderRow = (item: FeeExceptionList) => (
     <tr
       key={item.id}
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
-      <td className="p-4">{item.name}</td>
-      <td className="p-4">{new Date(item.startDate).toLocaleDateString()}</td>
-      <td className="p-4">{new Date(item.endDate).toLocaleDateString()}</td>
-      <td className="hidden md:table-cell p-4">{item.academicYear?.year}</td>
-      {role === "admin" && (
-        <td className="p-4">
-          <ClientOnlyComponent>
-            <div className="flex items-center gap-2">
-              <FormContainer table="term" type="update" data={item} />
-              <FormContainer table="term" type="delete" id={item.id} />
-            </div>
-          </ClientOnlyComponent>
+      <td className="flex items-center gap-4 p-4">
+        {item.student.firstName} {item.student.lastName}
+      </td>
+      <td>{item.feeTemplate.feeType.name}</td>
+      <td>{item.type}</td>
+      <td>{item.adjustmentType === 'PERCENTAGE' ? `${item.adjustmentValue}%` : `$${item.adjustmentValue}`}</td>
+      <td>{new Date(item.startDate).toLocaleDateString()}</td>
+      <td>{item.endDate ? new Date(item.endDate).toLocaleDateString() : 'N/A'}</td>
+      <td>{item.status}</td>
+      {(role === "admin" || role === "teacher") && (
+        <td>
+          <FormContainer table="feeException" type="update" data={item} />
         </td>
       )}
     </tr>
@@ -79,8 +92,9 @@ const TermList: React.FC<TermListProps> = ({ data, count, searchParams }) => {
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
+      {/* TOP */}
       <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">All Terms</h1>
+        <h1 className="hidden md:block text-lg font-semibold">Fee Exceptions</h1>
         <ClientOnlyComponent>
           <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
             <TableSearch />
@@ -91,17 +105,21 @@ const TermList: React.FC<TermListProps> = ({ data, count, searchParams }) => {
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
                 <Image src="/sort.png" alt="" width={14} height={14} />
               </button>
-              {role === "admin" && <FormContainer table="term" type="create" />}
+              {(role === "admin" || role === "teacher") && (
+                <FormContainer table="feeException" type="create" />
+              )}
             </div>
           </div>
         </ClientOnlyComponent>
       </div>
+      {/* LIST */}
       <ClientOnlyComponent>
         <Table columns={columns} renderRow={renderRow} data={data} />
       </ClientOnlyComponent>
+      {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>
   );
 };
 
-export default TermList;
+export default FeeExceptionList;

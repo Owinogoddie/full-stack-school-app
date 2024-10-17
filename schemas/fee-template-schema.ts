@@ -3,13 +3,13 @@ import { z } from "zod";
 
 export const feeTemplateSchema = z.object({
   id: z.string().optional(),
-  gradeIds: z.array(z.string()),
-  classIds: z.array(z.string()).optional(),
-  academicYearId: z.string(),
+  classes: z.array(z.string()),
+  grades: z.array(z.string()).optional(),
+  academicYearId: z.number(),
   termId: z.string(),
   feeTypeId: z.string(),
   studentCategoryIds: z.array(z.string()).optional(),
-  baseAmount: z.number().min(0, "Base amount must be a positive number"),
+  baseAmount:  z.coerce.number().min(0, "Amount must be a positive number"),
 });
 
 export type FeeTemplateSchema = z.infer<typeof feeTemplateSchema>;

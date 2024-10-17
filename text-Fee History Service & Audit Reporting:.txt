@@ -1,0 +1,77 @@
+export class FeeHistoryService {
+  // Core history tracking
+  async trackChange({
+    entityType,
+    entityId,
+    action,
+    changes,
+    userId,
+    metadata
+  }: {
+    entityType: 'FEE_TEMPLATE' | 'FEE_EXCEPTION' | 'PAYMENT' | 'STUDENT_FEE',
+    entityId: string,
+    action: 'CREATE' | 'UPDATE' | 'DELETE' | 'PAYMENT' | 'ADJUSTMENT',
+    changes: any,
+    userId: string,
+    metadata?: any
+  }) {
+    return prisma.feeAuditLog.create({
+      data: {
+        entityType,
+        entityId,
+        action,
+        changes: JSON.stringify(changes),
+        performedBy: userId,
+        timestamp: new Date(),
+        metadata: metadata ? JSON.stringify(metadata) : null
+      }
+    });
+  }
+
+  // Comprehensive audit report generation
+  async generateAuditReport(params: {
+    startDate: Date,
+    endDate: Date,
+    entityTypes?: string[],
+    actions?: string[],
+    users?: string[]
+  }) {
+    const logs = await prisma.feeAuditLog.findMany({
+      where: {
+        timestamp: {
+          gte: params.startDate,
+          lte: params.endDate
+        },
+        entityType: params.entityTypes ? { in: params.entityTypes } : undefined,
+        action: params.actions ? { in: params.actions } : undefined,
+        performedBy: params.users ? { in: params.users } : undefined
+      },
+      include: {
+        user: true
+      },
+      orderBy: { timestamp: 'asc' }
+    });
+
+    return {
+      period: {
+        start: params.startDate,
+        end: params.endDate
+      },
+      summary: {
+        totalChanges: logs.length,
+        byEntityType: this.groupBy(logs, 'entityType'),
+        byAction: this.groupBy(logs, 'action'),
+        byUser: this.groupBy(logs, 'performedBy')
+      },
+      details: logs.map(log => ({
+        timestamp: log.timestamp,
+        action: log.action,
+        entityType: log.entityType,
+        entityId: log.entityId,
+        changes: JSON.parse(log.changes),
+        user: log.user.name,
+        metadata: log.metadata ? JSON.parse(log.metadata) : null
+      }))
+    };
+  }
+}

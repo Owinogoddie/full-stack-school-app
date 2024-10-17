@@ -4,11 +4,17 @@ import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
-import { FeeTemplateSchema, feeTemplateSchema } from "@/schemas/fee-template-schema";
+import {
+  FeeTemplateSchema,
+  feeTemplateSchema,
+} from "@/schemas/fee-template-schema";
 import InputField from "../input-field";
 import SelectField from "../select-field";
 import MultiSelect from "../multi-select";
-import { createFeeTemplate, updateFeeTemplate } from "@/actions/feetemplate-actions";
+import {
+  createFeeTemplate,
+  updateFeeTemplate,
+} from "@/actions/feetemplate-actions";
 
 type ResponseState = {
   success: boolean;
@@ -47,13 +53,13 @@ const FeeTemplateForm = ({
     resolver: zodResolver(feeTemplateSchema),
     defaultValues: {
       id: data?.id,
-      gradeIds: data?.gradeIds || [],
-      classIds: data?.classIds || [],
-      academicYearId: data?.academicYearId || "",
+      academicYearId: data?.academicYearId || undefined,
       termId: data?.termId || "",
       feeTypeId: data?.feeTypeId || "",
       studentCategoryIds: data?.studentCategoryIds || [],
       baseAmount: data?.baseAmount || 0,
+      grades: data?.grades?.map((grade: any) => grade.id.toString()) || [],
+      classes: data?.classes?.map((cls: any) => cls.id.toString()) || [],
     },
   });
 
@@ -63,16 +69,21 @@ const FeeTemplateForm = ({
   });
 
   const router = useRouter();
-
-  const watchGradeIds = watch("gradeIds");
+  const watchgrades = watch("grades") ?? [];
   const watchAcademicYearId = watch("academicYearId");
 
   const onSubmit = handleSubmit(async (formData) => {
+    // Transform baseAmount to number
+    const transformedData = {
+      ...formData,
+      baseAmount: parseFloat(formData.baseAmount as unknown as string) || 0,
+    };
+
     let responseState: ResponseState;
     if (type === "create") {
-      responseState = await createFeeTemplate(formData);
+      responseState = await createFeeTemplate(transformedData);
     } else {
-      responseState = await updateFeeTemplate(formData);
+      responseState = await updateFeeTemplate(transformedData);
     }
     setState(responseState);
   });
@@ -90,22 +101,23 @@ const FeeTemplateForm = ({
   }, [state, router, type, setOpen]);
 
   const availableClasses = relatedData.classes.filter(
-    (classItem) => 
-      watchGradeIds.length === 0 || 
-      watchGradeIds.includes(classItem.gradeId)
+    (classItem) =>
+      watchgrades.length === 0 || watchgrades.includes(classItem.gradeId)
   );
 
   const filteredTerms = relatedData.terms.filter(
-    (term) => term.academicYearId.toString() === watchAcademicYearId
+    (term) => term.academicYearId === watchAcademicYearId
   );
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new Fee Template" : "Update the Fee Template"}
+        {type === "create"
+          ? "Create a new Fee Template"
+          : "Update the Fee Template"}
       </h1>
 
       <Controller
-        name="gradeIds"
+        name="grades"
         control={control}
         render={({ field }) => (
           <MultiSelect
@@ -118,16 +130,16 @@ const FeeTemplateForm = ({
             onChange={(newValue) => {
               field.onChange(newValue);
               if (newValue.length === relatedData.grades.length) {
-                setValue("classIds", []);
+                setValue("classes", []);
               }
             }}
-            error={errors.gradeIds}
+            error={errors.grades}
           />
         )}
       />
 
       <Controller
-        name="classIds"
+        name="classes"
         control={control}
         render={({ field }) => (
           <MultiSelect
@@ -138,8 +150,8 @@ const FeeTemplateForm = ({
             }))}
             value={field.value || []}
             onChange={(newValue) => field.onChange(newValue)}
-            error={errors.classIds}
-            disabled={watchGradeIds.length === relatedData.grades.length}
+            error={errors.classes}
+            disabled={watchgrades.length === relatedData.grades.length}
           />
         )}
       />
@@ -154,7 +166,7 @@ const FeeTemplateForm = ({
         register={register}
         setValue={setValue}
         error={errors.academicYearId}
-        defaultValue={data?.academicYearId || ""}
+        defaultValue={data?.academicYearId?.toString() || ""}
       />
 
       <SelectField

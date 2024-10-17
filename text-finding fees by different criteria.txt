@@ -1,0 +1,115 @@
+export class FeeQueryService {
+  // Find fees by class/grade/course
+  async getFeesByGroup(params: {
+    academicYearId: number,
+    termId?: string,
+    gradeId?: string,
+    classId?: string,
+    courseId?: string
+  }) {
+    const students = await prisma.student.findMany({
+      where: {
+        gradeId: params.gradeId,
+        classId: params.classId,
+        courses: params.courseId ? {
+          some: { id: params.courseId }
+        } : undefined
+      },
+      include: {
+        feeItems: {
+          where: {
+            academicYearId: params.academicYearId,
+            termId: params.termId
+          },
+          include: {
+            feeType: true,
+            transactions: true
+          }
+        }
+      }
+    });
+
+    return {
+      totalStudents: students.length,
+      feesSummary: this.calculateFeeSummary(students),
+      studentDetails: students.map(student => ({
+        id: student.id,
+        name: student.name,
+        fees: this.calculateStudentFees(student)
+      }))
+    };
+  }
+
+  // Payment status queries
+  async getPaymentStatus(params: {
+    academicYearId: number,
+    termId?: string,
+    status?: 'COMPLETED' | 'PARTIAL' | 'UNPAID' | 'OVERPAID'
+  }) {
+    const students = await prisma.student.findMany({
+      include: {
+        feeItems: {
+          where: {
+            academicYearId: params.academicYearId,
+            termId: params.termId
+          },
+          include: {
+            feeType: true,
+            transactions: true
+          }
+        }
+      }
+    });
+
+    const statusMap = {
+      COMPLETED: (student) => this.isFullyPaid(student),
+      PARTIAL: (student) => this.isPartiallyPaid(student),
+      UNPAID: (student) => this.isUnpaid(student),
+      OVERPAID: (student) => this.isOverpaid(student)
+    };
+
+    const filteredStudents = params.status 
+      ? students.filter(statusMap[params.status])
+      : students;
+
+    return {
+      total: filteredStudents.length,
+      students: filteredStudents.map(student => ({
+        id: student.id,
+        name: student.name,
+        paymentStatus: this.calculatePaymentStatus(student),
+        feeDetails: this.calculateStudentFees(student)
+      }))
+    };
+  }
+
+  // Payment analytics
+  async getPaymentAnalytics(params: {
+    academicYearId: number,
+    termId?: string
+  }) {
+    const payments = await prisma.feeTransaction.findMany({
+      where: {
+        academicYearId: params.academicYearId,
+        termId: params.termId
+      },
+      include: {
+        student: true,
+        feeItem: {
+          include: {
+            feeType: true
+          }
+        }
+      }
+    });
+
+    return {
+      totalCollected: this.sum(payments, 'amount'),
+      byPaymentMethod: this.groupBy(payments, 'method'),
+      byFeeType: this.groupByFeeType(payments),
+      timeline: this.generatePaymentTimeline(payments),
+      topPayers: this.getTopPayers(payments),
+      paymentTrends: await this.analyzePaymentTrends(params)
+    };
+  }
+}

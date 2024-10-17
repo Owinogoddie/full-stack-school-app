@@ -1,4 +1,5 @@
 // user-actions.ts
+'use server'
 import prisma from "@/lib/prisma";
 
 export const getUserCount = async (type: "admin" | "teacher" | "student" | "parent"): Promise<number> => {

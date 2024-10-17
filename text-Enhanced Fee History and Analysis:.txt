@@ -1,0 +1,125 @@
+// Types
+interface FeeHistory {
+  id: string;
+  feeTemplateId: string;
+  timestamp: Date;
+  changes: {
+    field: string;
+    oldValue: any;
+    newValue: any;
+  }[];
+  reason: string;
+  affectedStudents?: number;
+  financialImpact?: {
+    totalChange: number;
+    averagePerStudent: number;
+  };
+}
+
+// Enhanced History Service
+export const feeHistoryService = {
+  async create(data: {
+    templateId: string,
+    changes: any[],
+    reason: string
+  }) {
+    // Calculate impact
+    const template = await prisma.feeTemplate.findUnique({
+      where: { id: data.templateId },
+      include: {
+        grades: true,
+        classes: true,
+        studentCategories: true
+      }
+    });
+
+    // Count affected students
+    const affectedStudents = await prisma.student.count({
+      where: {
+        OR: [
+          { gradeId: { in: template.grades.map(g => g.id) } },
+          { classId: { in: template.classes.map(c => c.id) } },
+          { categoryId: { in: template.studentCategories.map(sc => sc.id) } }
+        ]
+      }
+    });
+
+    // Calculate financial impact
+    const financialChange = data.changes.find(c => c.field === 'baseAmount');
+    const financialImpact = financialChange ? {
+      totalChange: (financialChange.newValue - financialChange.oldValue) * affectedStudents,
+      averagePerStudent: financialChange.newValue - financialChange.oldValue
+    } : undefined;
+
+    return prisma.feeHistory.create({
+      data: {
+        feeTemplateId: data.templateId,
+        changes: data.changes,
+        reason: data.reason,
+        affectedStudents,
+        financialImpact
+      }
+    });
+  },
+
+  // Analysis Methods
+  async analyzeTemplateChanges(templateId: string, period: { start: Date, end: Date }) {
+    const history = await prisma.feeHistory.findMany({
+      where: {
+        feeTemplateId: templateId,
+        timestamp: { gte: period.start, lte: period.end }
+      },
+      orderBy: { timestamp: 'asc' }
+    });
+
+    return {
+      totalChanges: history.length,
+      amountChanges: history.filter(h => 
+        h.changes.some(c => c.field === 'baseAmount')
+      ).length,
+      totalImpact: history.reduce((sum, h) => 
+        sum + (h.financialImpact?.totalChange || 0), 0
+      ),
+      changeFrequency: history.length / 
+        ((period.end.getTime() - period.start.getTime()) / (1000 * 60 * 60 * 24 * 30)), // Changes per month
+      mostCommonReasons: Object.entries(
+        history.reduce((acc, h) => {
+          acc[h.reason] = (acc[h.reason] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      ).sort(([,a], [,b]) => b - a).slice(0, 5)
+    };
+  },
+
+  async generateAuditReport(period: { start: Date, end: Date }) {
+    const changes = await prisma.feeHistory.findMany({
+      where: {
+        timestamp: { gte: period.start, lte: period.end }
+      },
+      include: {
+        feeTemplate: true
+      },
+      orderBy: { timestamp: 'asc' }
+    });
+
+    return {
+      period,
+      totalChanges: changes.length,
+      byTemplate: changes.reduce((acc, change) => {
+        const key = change.feeTemplate.name;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>),
+      totalFinancialImpact: changes.reduce((sum, c) => 
+        sum + (c.financialImpact?.totalChange || 0), 0
+      ),
+      timeline: changes.map(c => ({
+        date: c.timestamp,
+        template: c.feeTemplate.name,
+        changes: c.changes,
+        reason: c.reason,
+        impact: c.financialImpact
+      }))
+    };
+  }
+};

@@ -25,7 +25,9 @@ export type FormContainerProps = {
   | "studentCategory"
   | "feeType"
   | "term"
-  | "feeTemplate";
+  | "feeTemplate"
+  | "feeTransaction"
+  | "feeException";
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;

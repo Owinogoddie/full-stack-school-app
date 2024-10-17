@@ -1,0 +1,36 @@
+interface FeeException {
+  id: string;
+  feeTemplateId: string;
+  studentId: string;
+  type: 'DISCOUNT' | 'SCHOLARSHIP' | 'WAIVER' | 'ADJUSTMENT';
+  adjustmentType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  adjustmentValue: number; // percentage or fixed amount
+  reason: string;
+  startDate: Date;
+  endDate?: Date;
+  approvedBy: string;
+  documents?: string[]; // URLs to supporting documents
+  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+}
+
+export async function createFeeException(data: Omit<FeeException, 'id' | 'status'>) {
+  // Validate exception
+  const template = await prisma.feeTemplate.findUnique({
+    where: { id: data.feeTemplateId }
+  });
+
+  if (!template) throw new Error("Template not found");
+
+  // Calculate adjusted amount
+  const adjustedAmount = data.adjustmentType === 'PERCENTAGE' 
+    ? template.baseAmount * (1 - data.adjustmentValue / 100)
+    : template.baseAmount - data.adjustmentValue;
+
+  return prisma.feeException.create({
+    data: {
+      ...data,
+      status: 'ACTIVE',
+      adjustedAmount
+    }
+  });
+}

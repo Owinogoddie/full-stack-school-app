@@ -1,114 +1,132 @@
-export const createStudent = async (data: StudentSchema): Promise<ResponseState> => {
-  // ... existing code ...
+'use server'
 
-  try {
-    // ... existing code ...
+import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
 
-    await prisma.$transaction(async (prisma) => {
-      // ... existing student creation code ...
-
-      // Assign fees to the new student
-      await assignFeesToStudent(
-        student.id,
-        data.gradeId,
-        data.classId,
-        data.studentCategories || [],
-        currentAcademicYear.id,
-        currentAcademicYear.terms[0].id // Assuming the first term of the academic year
-      );
-    });
-
-    return { success: true, error: false, message: "Student created successfully with enrollment and fees assigned." };
-  } catch (err: any) {
-    // ... existing error handling ...
-  }
-};
-
-export const updateStudent = async (data: any): Promise<ResponseState> => {
-    // ... existing code ...
-  
-    try {
-      // ... existing code ...
-  
-      await prisma.$transaction(async (prisma) => {
-        // ... existing student update code ...
-  
-        // Reassign fees if grade, class, or categories have changed
-        if (originalStudent.gradeId !== data.gradeId ||
-            originalStudent.classId !== data.classId ||
-            JSON.stringify(originalStudent.studentCategories.map(c => c.id).sort()) !== JSON.stringify(data.studentCategories.sort())) {
-          
-          // Delete existing fee items for the current term
-          await prisma.feeItem.deleteMany({
-            where: {
-              studentId: data.id,
-              termId: data.currentTermId, // Assuming you have the current term ID
-            }
-          });
-  
-          // Assign new fees
-          await assignFeesToStudent(
-            data.id,
-            data.gradeId,
-            data.classId,
-            data.studentCategories || [],
-            data.currentAcademicYearId, // Assuming you have the current academic year ID
-            data.currentTermId
-          );
-        }
-      });
-  
-      return { success: true, error: false, message: "Student updated successfully with fees reassigned if necessary." };
-    } catch (err: any) {
-      // ... existing error handling ...
-    }
-  };
-  // Get all fee items for a student in a given academic year
-export async function getStudentFees(studentId: string, academicYearId: number) {
-    return await prisma.feeItem.findMany({
-      where: {
-        studentId: studentId,
-        academicYear: { id: academicYearId },
-      },
-      include: {
-        feeType: true,
-        term: true,
-      }
-    });
-  }
-  
-  // Get total amount due for a student in a given academic year
-  export async function getStudentTotalDue(studentId: string, academicYearId: number) {
-    const feeItems = await getStudentFees(studentId, academicYearId);
-    return feeItems.reduce((total, item) => total + (item.amount - item.finalAmount), 0);
-  }
-  
-  // Record a fee payment
-  export async function recordFeePayment(studentId: string, feeItemId: string, amount: number, paymentMethod: string) {
-    await prisma.$transaction(async (prisma) => {
-      // Create a new fee transaction
-      await prisma.feeTransaction.create({
-        data: {
-          amount: amount,
-          paymentDate: new Date(),
-          method: paymentMethod,
-          studentId: studentId,
-          feeItemId: feeItemId,
-          status: 'COMPLETED',
-        }
-      });
-  
-      // Update the fee item
-      const feeItem = await prisma.feeItem.findUnique({ where: { id: feeItemId } });
-      if (feeItem) {
-        const newFinalAmount = feeItem.finalAmount + amount;
-        await prisma.feeItem.update({
-          where: { id: feeItemId },
-          data: {
-            finalAmount: newFinalAmount,
-            status: newFinalAmount >= feeItem.amount ? 'PAID' : 'PARTIALLY_PAID',
+export async function calculateStudentFees(
+  studentId: string,
+  academicYearId: number,
+  termId: string
+) {
+  // Get applicable templates
+  const templates = await prisma.feeTemplate.findMany({
+    where: {
+      academicYearId,
+      termId,
+      isActive: true,
+      OR: [
+        {
+          grades: {
+            hasSome: [student.gradeId]
           }
-        });
+        },
+        {
+          classes: {
+            hasSome: [student.classId]
+          }
+        },
+        {
+          studentCategories: {
+            hasSome: [student.categoryId]
+          }
+        }
+      ]
+    },
+    include: {
+      exceptions: {
+        where: {
+          studentId,
+          OR: [
+            { endDate: null },
+            { endDate: { gt: new Date() } }
+          ]
+        }
       }
-    });
+    }
+  })
+
+  // Calculate totals considering exceptions
+  const feeDetails = templates.map(template => {
+    const exception = template.exceptions[0]
+    const actualAmount = exception?.adjustedAmount ?? template.baseAmount
+    
+    return {
+      templateId: template.id,
+      originalAmount: template.baseAmount,
+      adjustedAmount: actualAmount,
+      hasException: !!exception
+    }
+  })
+
+  // Get payments made
+  const transactions = await prisma.feeTransaction.findMany({
+    where: {
+      studentId,
+      academicYearId,
+      termId
+    }
+  })
+
+  // Calculate balances
+  const totalDue = feeDetails.reduce((sum, fee) => sum + fee.adjustedAmount, 0)
+  const totalPaid = transactions.reduce((sum, tx) => sum + tx.amount, 0)
+  const balance = totalDue - totalPaid
+
+  return {
+    feeDetails,
+    transactions,
+    summary: {
+      totalDue,
+      totalPaid,
+      balance
+    }
   }
+}
+
+export async function createFeeTemplate(data: Omit<FeeTemplate, 'id' | 'version'>) {
+  const template = await prisma.feeTemplate.create({
+    data: {
+      ...data,
+      version: 1
+    }
+  })
+  revalidatePath('/dashboard/fees/templates')
+  return template
+}
+
+export async function recordPayment(data: {
+  studentId: string
+  amount: number
+  method: PaymentMethod
+  feeTemplateId: string
+  termId: string
+  academicYearId: number
+  notes?: string
+}) {
+  // Generate receipt number
+  const receiptNumber = `RCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+  // Get current balance
+  const { summary } = await calculateStudentFees(
+    data.studentId,
+    data.academicYearId,
+    data.termId
+  )
+
+  const newBalance = summary.balance - data.amount
+  const status = newBalance <= 0 ? 'PAID' : 'PARTIALLY_PAID'
+
+  const transaction = await prisma.feeTransaction.create({
+    data: {
+      ...data,
+      receiptNumber,
+      status,
+      balance: newBalance,
+      isPartialPayment: newBalance > 0,
+      paymentDate: new Date()
+    }
+  })
+
+  revalidatePath('/dashboard/fees/transactions')
+  return transaction
+}

@@ -236,6 +236,8 @@ export async function GET(request: Request) {
 
       case "feeType":
         // No related data needed for fee type
+      case "feeTransaction":
+        // No related data needed for fee type
         break;
         case "feeTemplate":
           const feeTemplateGrades = await prisma.grade.findMany({
@@ -265,6 +267,41 @@ export async function GET(request: Request) {
             studentCategories: feeTemplateCategories,
           };
           break;
+          case "feeException":
+            const feeExceptionStudents = await prisma.student.findMany({
+              select: { id: true, firstName: true, lastName: true },
+            });
+            const feeExceptionTemplates = await prisma.feeTemplate.findMany({
+              select: {
+                id: true,
+                feeType: {
+                  select: { name: true },
+                },
+                academicYear: {
+                  select: { year: true },
+                },
+                term: {
+                  select: { name: true },
+                },
+              },
+            });
+            const formattedFeeTemplates = feeExceptionTemplates.map(template => ({
+              id: template.id,
+              name: `${template.feeType.name} - ${template.academicYear.year} - ${template.term.name}`,
+            }));
+            const feeExceptionAcademicYears = await prisma.academicYear.findMany({
+              select: { id: true, year: true },
+            });
+            const feeExceptionTerms = await prisma.term.findMany({
+              select: { id: true, name: true, academicYearId: true },
+            });
+            relatedData = {
+              students: feeExceptionStudents,
+              feeTemplates: formattedFeeTemplates,
+              academicYears: feeExceptionAcademicYears,
+              terms: feeExceptionTerms,
+            };
+            break;
         case "term":
         const termAcademicYears = await prisma.academicYear.findMany({
           select: { id: true, year: true },
