@@ -35,6 +35,7 @@ model School {
 
   feeTypes     FeeType[]
   feeTemplates FeeTemplate[]
+  specialProgrammes SpecialProgramme[]
 
   studentCategories   StudentCategory[]
   books               Book[]
@@ -116,7 +117,8 @@ model Grade {
   finalResults       FinalResult[]
   exams              Exam[]
   learningObjectives LearningObjective[]
-  feeTemplates       FeeTemplate[] // Many-to-many relation
+  specialProgrammes  SpecialProgramme[]
+  feeTemplateGradeClasses FeeTemplateGradeClass[] // New relation
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 }
@@ -140,7 +142,8 @@ model Class {
   results       Result[]
   finalResults  FinalResult[]
   attendances   Attendance[]
-  feeTemplates  FeeTemplate[]
+  specialProgrammes SpecialProgramme[]
+  feeTemplateGradeClasses FeeTemplateGradeClass[] // New relation
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -160,40 +163,42 @@ model Parent {
 }
 
 model Student {
-  id                    String            @id @default(uuid())
-  upi                   String            @unique
-  admissionNumber       String            @unique
+  id                    String                 @id @default(uuid())
+  upi                   String                 @unique
+  admissionNumber       String                 @unique
   img                   String?
   firstName             String
   lastName              String
   dateOfBirth           DateTime
   gender                Gender
   address               String
-  class                 Class?            @relation(fields: [classId], references: [id])
+  class                 Class?                 @relation(fields: [classId], references: [id])
   classId               Int?
-  grade                 Grade             @relation(fields: [gradeId], references: [id])
+  grade                 Grade                  @relation(fields: [gradeId], references: [id])
   gradeId               Int
-  school                School?           @relation(fields: [schoolId], references: [id])
+  school                School?                @relation(fields: [schoolId], references: [id])
   schoolId              String?
-  parent                Parent?           @relation(fields: [parentId], references: [id])
+  parent                Parent?                @relation(fields: [parentId], references: [id])
   parentId              String?
   enrollmentDate        DateTime
   medicalInfo           String?
   specialNeeds          String?
-  currentAcademicYear   AcademicYear?     @relation("CurrentAcademicYear", fields: [currentAcademicYearId], references: [id])
+  currentAcademicYear   AcademicYear?          @relation("CurrentAcademicYear", fields: [currentAcademicYearId], references: [id])
   currentAcademicYearId Int?
-  status                StudentStatus     @default(ACTIVE)
+  status                StudentStatus          @default(ACTIVE)
   graduationDate        DateTime?
   assessments           Assessment[]
   enrollments           Enrollment[]
   projects              Project[]
   attendances           Attendance[]
   transferRecords       TransferRecord[]
-  receivedFiles         File[]            @relation("StudentFiles")
+  receivedFiles         File[]                 @relation("StudentFiles")
   results               Result[]
-  transactions          FeeTransaction[]
+  feeTransactions          FeeTransaction[]
   studentCategories     StudentCategory[]
   feeExceptions         FeeException[]
+  studentCreditBalances StudentCreditBalance[]
+  specialProgrammes SpecialProgramme[]
 
   finalResults        FinalResult[]
   bookLoans           BookLoan[]
@@ -316,7 +321,19 @@ model LearningObjective {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
+model SpecialProgramme {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  schoolId    String?
+  school      School ?   @relation(fields: [schoolId], references: [id])
+  grades      Grade[]   
+  classes     Class[]  
+  feeTemplate FeeTemplate[]
+  students    Student[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
 model FeeAuditLog {
   id          String   @id @default(cuid()) // Unique identifier for each log entry
   entityType  String // Type of entity (e.g., FEE_TEMPLATE, FEE_EXCEPTION, PAYMENT, STUDENT_FEE)
@@ -326,9 +343,8 @@ model FeeAuditLog {
   performedBy String // ID of the user who performed the action
   timestamp   DateTime @default(now()) // Timestamp of when the action occurred
   metadata    String? // Optional metadata as JSON string for additional context
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model FeeType {
@@ -346,8 +362,6 @@ model FeeType {
 
 model FeeTemplate {
   id                String            @id @default(uuid())
-  grades            Grade[]
-  classes           Class[]
   school            School?           @relation(fields: [schoolId], references: [id])
   schoolId          String?
   academicYearId    Int
@@ -358,23 +372,38 @@ model FeeTemplate {
   feeType           FeeType           @relation(fields: [feeTypeId], references: [id])
   studentCategories StudentCategory[]
   baseAmount        Float
-  // Add version tracking
   version           Int               @default(1)
   isActive          Boolean           @default(true)
-  // Add flexibility for exceptions
   exceptions        FeeException[]
   feeTransactions   FeeTransaction[]
   feeHistories      FeeHistory[]
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  feeAllocations    FeeAllocation[]
+  specialProgrammeId String?
+  specialProgramme   SpecialProgramme? @relation(fields: [specialProgrammeId], references: [id])
+  feeTemplateGradeClasses FeeTemplateGradeClass[] // New relation
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FeeTemplateGradeClass {
+  id            String      @id @default(uuid())
+  feeTemplate   FeeTemplate @relation(fields: [feeTemplateId], references: [id])
+  feeTemplateId String
+  grade         Grade       @relation(fields: [gradeId], references: [id])
+  gradeId       Int
+  class         Class       @relation(fields: [classId], references: [id])
+  classId       Int
+
+  @@unique([feeTemplateId, gradeId, classId])
 }
 
 model FeeException {
-  id              String   @id @default(uuid())
+  id              String      @id @default(uuid())
   feeTemplateId   String
   feeTemplate     FeeTemplate @relation(fields: [feeTemplateId], references: [id])
   studentId       String
-  student         Student  @relation(fields: [studentId], references: [id])
+  student         Student     @relation(fields: [studentId], references: [id])
   type            String
   adjustmentType  String
   adjustmentValue Float
@@ -382,47 +411,70 @@ model FeeException {
   startDate       DateTime
   endDate         DateTime?
   status          String
+  approvedBy      String?
 }
 
 // model for tracking exceptions
 model FeeTransaction {
-  id               String        @id @default(uuid())
-  amount           Float
-  paymentDate      DateTime
-  method           String
-  studentId        String
-  student          Student       @relation(fields: [studentId], references: [id])
+  id                 String                    @id @default(uuid())
+  amount             Float
+  paymentDate        DateTime
+  method             String
+  studentId          String
+  student            Student                   @relation(fields: [studentId], references: [id])
   // Track which fee template this payment is for
-  feeTemplateId    String
-  feeTemplate      FeeTemplate   @relation(fields: [feeTemplateId], references: [id])
-  termId           String
-  term             Term          @relation(fields: [termId], references: [id])
-  academicYearId   Int
-  academicYear     AcademicYear  @relation(fields: [academicYearId], references: [id])
+  feeTemplateId      String
+  feeTemplate        FeeTemplate               @relation(fields: [feeTemplateId], references: [id])
+  termId             String
+  term               Term                      @relation(fields: [termId], references: [id])
+  academicYearId     Int
+  academicYear       AcademicYear              @relation(fields: [academicYearId], references: [id])
   //  for better tracking
-  receiptNumber    String        @unique
-  status           PaymentStatus
-  balance          Float // Running balance after this transaction
-  isPartialPayment Boolean       @default(false)
-  notes            String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  receiptNumber      String                    @unique
+  status             PaymentStatus
+  balance            Float // Running balance after this transaction
+  isPartialPayment   Boolean                   @default(false)
+  notes              String?
+  allocationStrategy PaymentAllocationStrategy @default(OLDEST_FIRST)
+  allocations        FeeAllocation[]
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+}
+
+// New model to track how payment was allocated
+model FeeAllocation {
+  id              String         @id @default(uuid())
+  transactionId   String
+  transaction     FeeTransaction @relation(fields: [transactionId], references: [id])
+  feeTemplateId   String
+  feeTemplate     FeeTemplate    @relation(fields: [feeTemplateId], references: [id])
+  amountAllocated Float
+  createdAt       DateTime       @default(now())
 }
 
 // model for tracking historical fee amounts
 model FeeHistory {
-  id             String      @id @default(uuid())
-  feeTemplateId  String
-  feeTemplate    FeeTemplate @relation(fields: [feeTemplateId], references: [id])
-  changes        Json
-  reason         String?
+  id            String      @id @default(uuid())
+  feeTemplateId String
+  feeTemplate   FeeTemplate @relation(fields: [feeTemplateId], references: [id])
+  changes       Json
+  reason        String?
 
-  previousAmount Float?//not needed???
-  newAmount      Float?//not needed???
+  previousAmount Float? //not needed???
+  newAmount      Float? //not needed???
   changeDate     DateTime
-  version        Int ?//not needed???// Links to template version
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  version        Int? //not needed???// Links to template version
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model StudentCreditBalance {
+  id        String   @id @default(uuid())
+  studentId String @unique
+  student   Student  @relation(fields: [studentId], references: [id])
+  amount    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Book {
@@ -850,6 +902,7 @@ enum Stage {
 }
 
 enum GradeLevel {
+  PLAYGROUP
   PP1
   PP2
   GRADE1
@@ -955,6 +1008,12 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
+}
+
+enum PaymentAllocationStrategy {
+  OLDEST_FIRST
+  PROPORTIONAL
+  CUSTOM
 }
 
 enum LoanStatus {

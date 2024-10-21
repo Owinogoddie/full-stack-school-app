@@ -46,7 +46,6 @@ export const createAcademicYear = async (data: AcademicYearSchema): Promise<Resp
     return { success: false, error: true, message: "Failed to create academic year" };
   }
 };
-
 export const updateAcademicYear = async (data: AcademicYearSchema): Promise<ResponseState> => {
   try {
     if (!data.id) {
@@ -61,6 +60,11 @@ export const updateAcademicYear = async (data: AcademicYearSchema): Promise<Resp
       });
     }
 
+    // Fetch existing terms
+    const existingTerms = await prisma.term.findMany({
+      where: { academicYearId: data.id },
+    });
+
     // Update the academic year and its terms
     await prisma.academicYear.update({
       where: { id: data.id },
@@ -70,11 +74,20 @@ export const updateAcademicYear = async (data: AcademicYearSchema): Promise<Resp
         endDate: data.endDate,
         currentAcademicYear: data.currentAcademicYear,
         terms: {
-          deleteMany: {}, // Delete existing terms
-          create: data.terms.map((term) => ({
-            name: term.name,
-            startDate: term.startDate,
-            endDate: term.endDate,
+          upsert: data.terms.map((term) => ({
+            where: {
+              id: existingTerms.find(et => et.name === term.name)?.id || '',
+            },
+            update: {
+              name: term.name,
+              startDate: term.startDate,
+              endDate: term.endDate,
+            },
+            create: {
+              name: term.name,
+              startDate: term.startDate,
+              endDate: term.endDate,
+            },
           })),
         },
       },

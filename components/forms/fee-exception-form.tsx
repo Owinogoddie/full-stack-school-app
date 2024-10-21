@@ -7,8 +7,14 @@ import SelectField from "../select-field";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { FeeExceptionSchema, feeExceptionSchema } from "@/schemas/fee-exception-schema";
-import { createFeeException, updateFeeException } from "@/actions/fee-exception-actions";
+import {
+  FeeExceptionSchema,
+  feeExceptionSchema,
+} from "@/schemas/fee-exception-schema";
+import {
+  createFeeException,
+  updateFeeException,
+} from "@/actions/fee-exception-actions";
 import GlobalDataCheck from "../global-data-check-component";
 
 type ResponseState = {
@@ -38,8 +44,12 @@ const FeeExceptionForm = ({
     resolver: zodResolver(feeExceptionSchema),
     defaultValues: {
       ...data,
-      startDate: data?.startDate ? new Date(data.startDate).toISOString().split("T")[0] : undefined,
-      endDate: data?.endDate ? new Date(data.endDate).toISOString().split("T")[0] : undefined,
+      startDate: data?.startDate
+        ? new Date(data.startDate).toISOString().split("T")[0]
+        : undefined,
+      endDate: data?.endDate
+        ? new Date(data.endDate).toISOString().split("T")[0]
+        : undefined,
       feeTemplateId: data?.feeTemplateId,
       studentId: data?.studentId,
     },
@@ -77,12 +87,14 @@ const FeeExceptionForm = ({
       state.messages?.forEach((message: string) => toast.error(message));
     }
   }, [state, router, type, setOpen]);
-
+  console.log(relatedData);
   return (
     <GlobalDataCheck relatedData={relatedData}>
       <form className="flex flex-col gap-8" onSubmit={onSubmit}>
         <h1 className="text-xl font-semibold">
-          {type === "create" ? "Create a new fee exception" : "Update the fee exception"}
+          {type === "create"
+            ? "Create a new fee exception"
+            : "Update the fee exception"}
         </h1>
 
         <div className="flex flex-wrap gap-4">
@@ -90,7 +102,7 @@ const FeeExceptionForm = ({
             label="Fee Template"
             options={relatedData?.feeTemplates?.map((template: any) => ({
               value: template.id,
-              label: `${template.feeType.name} - ${template.academicYear.year} - ${template.term.name}`,
+              label: template.name,
             }))}
             name="feeTemplateId"
             register={register}
@@ -100,7 +112,7 @@ const FeeExceptionForm = ({
           <SelectField
             label="Student"
             options={relatedData?.students?.map((student: any) => ({
-              value: student.id,
+              value: student.id.toString(),
               label: `${student.firstName} ${student.lastName}`,
             }))}
             name="studentId"
@@ -159,12 +171,7 @@ const FeeExceptionForm = ({
             register={register}
             error={errors.endDate}
           />
-          <InputField
-            label="Approved By"
-            name="approvedBy"
-            register={register}
-            error={errors.approvedBy}
-          />
+          
           <SelectField
             label="Status"
             options={[

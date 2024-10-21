@@ -1,3 +1,4 @@
+// components/form-container.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,29 +6,30 @@ import FormModal from "./form-modal";
 
 export type FormContainerProps = {
   table:
-  | "teacher"
-  | "student"
-  | "parent"
-  | "subject"
-  | "class"
-  | "grade"
-  | "lesson"
-  | "exam"
-  | "assignment"
-  | "result"
-  | "attendance"
-  | "event"
-  | "announcement"
-  | "department"
-  | "examSchedule"
-  | "gradeScale"
-  | "academicYear"
-  | "studentCategory"
-  | "feeType"
-  | "term"
-  | "feeTemplate"
-  | "feeTransaction"
-  | "feeException";
+    | "teacher"
+    | "student"
+    | "parent"
+    | "subject"
+    | "class"
+    | "grade"
+    | "lesson"
+    | "exam"
+    | "assignment"
+    | "result"
+    | "attendance"
+    | "event"
+    | "announcement"
+    | "department"
+    | "examSchedule"
+    | "gradeScale"
+    | "academicYear"
+    | "studentCategory"
+    | "feeType"
+    | "term"
+    | "feeTemplate"
+    | "feeTransaction"
+    | "feeException"
+    | "specialProgramme";
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;

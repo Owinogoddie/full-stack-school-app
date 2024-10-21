@@ -4,6 +4,7 @@ import { z } from "zod";
 // Define the GradeLevel and Stage enums or schemas if they are not already defined
 
 const GradeLevelEnum = z.enum([
+  "PLAYGROUP",
   "PP1",
   "PP2",
   "GRADE1",

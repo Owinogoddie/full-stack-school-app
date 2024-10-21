@@ -1,5 +1,3 @@
-// File: app/feeTemplates/page.tsx
-
 import { Suspense } from 'react';
 import { AppError, handleError } from '@/lib/error-handler';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -17,6 +15,9 @@ async function fetchFeeTemplates(searchParams: { [key: string]: string | undefin
   if (search) {
     query.OR = [
       { academicYear: { year: { contains: search, mode: 'insensitive' } } },
+      { feeType: { name: { contains: search, mode: 'insensitive' } } },
+      { term: { name: { contains: search, mode: 'insensitive' } } },
+      { specialProgramme: { name: { contains: search, mode: 'insensitive' } } },
     ];
   }
 
@@ -24,23 +25,20 @@ async function fetchFeeTemplates(searchParams: { [key: string]: string | undefin
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
         switch (key) {
-          case "gradeId":
-            query.grades = { some: { id: parseInt(value) } };
+          case "academicYearId":
+            query.academicYearId = parseInt(value);
             break;
-          case "classId":
-            query.classes = { some: { id: parseInt(value) } };
-            break;
-            case "academicYearId":
-              query.academicYearId = parseInt(value);
-              break;
           case "termId":
-            query.termId = { equals: value };
+            query.termId = value;
             break;
           case "feeTypeId":
-            query.feeTypeId = { equals: value };
+            query.feeTypeId = value;
             break;
           case "studentCategoryId":
             query.studentCategories = { some: { id: value } };
+            break;
+          case "specialProgrammeId":
+            query.specialProgrammeId = value;
             break;
           default:
             break;
@@ -50,17 +48,21 @@ async function fetchFeeTemplates(searchParams: { [key: string]: string | undefin
   }
 
   try {
-    const [data, count] = await prisma.$transaction([
+    const [rawData, count] = await prisma.$transaction([
       prisma.feeTemplate.findMany({
         where: query,
         include: {
-          grades: true,
-          classes: true,
           term: true,
           feeType: true,
           studentCategories: true,
           academicYear: true,
-          // school: true,
+          specialProgramme: true,
+          feeTemplateGradeClasses: {
+            include: {
+              grade: true,
+              class: true,
+            },
+          }, // Include grade and class in FeeTemplateGradeClass
         },
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),
@@ -68,8 +70,19 @@ async function fetchFeeTemplates(searchParams: { [key: string]: string | undefin
       prisma.feeTemplate.count({ where: query }),
     ]);
 
+    // Transform gradeClasses into the needed format
+    const data = rawData.map((item) => ({
+      ...item,
+      gradeClasses: item.feeTemplateGradeClasses.map(gc => ({
+        gradeId: gc.gradeId,
+        gradeName: gc.grade.levelName,
+        classes: [{ id: gc.classId, name: gc.class.name }],
+      })),
+    }));
+
     return { data, count };
   } catch (error) {
+    console.error("Error in fetchFeeTemplates:", error);
     throw handleError(error);
   }
 }

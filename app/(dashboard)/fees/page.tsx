@@ -13,10 +13,12 @@ import {
 const menuItems = [
   { name: 'Dashboard', icon: HomeIcon, href: '/fees/dashboard' },
   { name: 'Fee Types', icon: CurrencyDollarIcon, href: '/fees/types' },
-  { name: 'Student Fees', icon: UserGroupIcon, href: '/fees/student-fees' },
   { name: 'Fee Templates', icon: ClipboardDocumentListIcon, href: '/fees/templates' },
+  { name: 'Fee Structures', icon: ClipboardDocumentListIcon, href: '/fees/structure' },
   { name: 'Exceptions', icon: CreditCardIcon, href: '/fees/exceptions' },
   { name: 'Transactions', icon: CreditCardIcon, href: '/fees/transactions' },
+  { name: 'Add Payments', icon: CreditCardIcon, href: '/fees/bulk-fee-payment' },
+  { name: 'Students Fee Summary', icon: UserGroupIcon, href: '/fees/student-fee-summary' },
   { name: 'Reports', icon: ChartBarIcon, href: '/fees/reports' },
   { name: 'Fee Settings', icon: CogIcon, href: '/fees/settings' },
 ]

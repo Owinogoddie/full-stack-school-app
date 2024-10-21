@@ -1,4 +1,4 @@
-'use server'
+"use server";
 
 import prisma from "@/lib/prisma";
 import { FeeExceptionSchema } from "@/schemas/fee-exception-schema";
@@ -15,54 +15,72 @@ type ResponseState = {
 
 const { userId } = auth();
 
-export const createFeeException = async (data: FeeExceptionSchema): Promise<ResponseState> => {
+export const createFeeException = async (
+  data: FeeExceptionSchema
+): Promise<ResponseState> => {
   try {
+    if (!userId) {
+      return { 
+        success: false, 
+        error: true, 
+        message: "User not authenticated" 
+      };
+    }
     const template = await prisma.feeTemplate.findUnique({
-      where: { id: data.feeTemplateId }
+      where: { id: data.feeTemplateId },
     });
-    
+
     if (!template) {
       return { success: false, error: true, message: "Fee template not found" };
     }
 
     if (data.endDate && data.startDate > data.endDate) {
-      return { success: false, error: true, message: "End date must be after start date" };
+      return {
+        success: false,
+        error: true,
+        message: "End date must be after start date",
+      };
     }
 
     const existingException = await prisma.feeException.findFirst({
       where: {
         studentId: data.studentId,
         feeTemplateId: data.feeTemplateId,
-        status: 'ACTIVE',
+        status: "ACTIVE",
         OR: [
           {
-            startDate: { lte: data.endDate || new Date('2099-12-31') },
-            endDate: { gte: data.startDate }
+            startDate: { lte: data.endDate || new Date("2099-12-31") },
+            endDate: { gte: data.startDate },
           },
           {
             startDate: { lte: data.startDate },
-            endDate: null
-          }
-        ]
-      }
+            endDate: null,
+          },
+        ],
+      },
     });
 
     if (existingException) {
-      return { success: false, error: true, message: "Overlapping exception exists" };
+      return {
+        success: false,
+        error: true,
+        message: "Overlapping exception exists",
+      };
     }
 
     const exception = await prisma.feeException.create({
       data: {
         ...data,
-        status: 'ACTIVE'
-      }
+        approvedBy: userId,
+        status: "ACTIVE",
+      },
     });
 
     // Log exception creation
     await logFeeChange({
-      entityType: 'FEE_EXCEPTION',
+      entityType: "FEE_EXCEPTION",
       entityId: exception.id,
-      action: 'CREATE',
+      action: "CREATE",
       changes: {
         feeTemplateId: data.feeTemplateId,
         studentId: data.studentId,
@@ -71,59 +89,81 @@ export const createFeeException = async (data: FeeExceptionSchema): Promise<Resp
         adjustmentValue: data.adjustmentValue,
         startDate: data.startDate,
         endDate: data.endDate,
-        status: 'ACTIVE'
+        status: "ACTIVE",
       },
-      performedBy: userId || 'SYSTEM',
+      performedBy: userId || "SYSTEM",
       feeAmountChange: {
         feeTemplateId: data.feeTemplateId,
         previousAmount: template.baseAmount,
-        newAmount: calculateAdjustedAmount(template.baseAmount, data.adjustmentType, data.adjustmentValue),
-        reason: `Exception created: ${data.type}`
-      }
+        newAmount: calculateAdjustedAmount(
+          template.baseAmount,
+          data.adjustmentType,
+          data.adjustmentValue
+        ),
+        reason: `Exception created: ${data.type}`,
+      },
     });
 
-    return { 
-      success: true, 
-      error: false, 
+    return {
+      success: true,
+      error: false,
       message: "Fee exception created successfully",
-      data: exception
+      data: exception,
     };
   } catch (err) {
     console.error(err);
-    return { success: false, error: true, message: "Failed to create fee exception" };
+    return {
+      success: false,
+      error: true,
+      message: "Failed to create fee exception",
+    };
   }
 };
 
-export const updateFeeException = async (updates: FeeExceptionSchema): Promise<ResponseState> => {
+export const updateFeeException = async (
+  updates: FeeExceptionSchema
+): Promise<ResponseState> => {
   try {
-    const {id} = updates;
+    if (!userId) {
+      return { 
+        success: false, 
+        error: true, 
+        message: "User not authenticated" 
+      };
+    }
+    const { id } = updates;
     if (!id) {
       throw new Error("ID is required for update");
     }
 
     const currentException = await prisma.feeException.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!currentException) {
-      return { success: false, error: true, message: "Fee exception not found" };
+      return {
+        success: false,
+        error: true,
+        message: "Fee exception not found",
+      };
     }
 
     const exception = await prisma.feeException.update({
       where: { id },
-      data: updates
+
+      data: { ...updates, approvedBy: userId },
     });
 
     // Log exception update
     await logFeeChange({
-      entityType: 'FEE_EXCEPTION',
+      entityType: "FEE_EXCEPTION",
       entityId: id,
-      action: 'UPDATE',
+      action: "UPDATE",
       changes: {
         old: currentException,
-        new: exception
+        new: exception,
       },
-      performedBy: userId || 'SYSTEM',
+      performedBy: userId || "SYSTEM",
       feeAmountChange: {
         feeTemplateId: exception.feeTemplateId,
         previousAmount: calculateAdjustedAmount(
@@ -136,19 +176,23 @@ export const updateFeeException = async (updates: FeeExceptionSchema): Promise<R
           updates.adjustmentType,
           updates.adjustmentValue
         ),
-        reason: `Exception updated: ${updates.type}`
-      }
+        reason: `Exception updated: ${updates.type}`,
+      },
     });
 
-    return { 
-      success: true, 
-      error: false, 
+    return {
+      success: true,
+      error: false,
       message: "Fee exception updated successfully",
-      data: exception
+      data: exception,
     };
   } catch (err) {
     console.error(err);
-    return { success: false, error: true, message: "Failed to update fee exception" };
+    return {
+      success: false,
+      error: true,
+      message: "Failed to update fee exception",
+    };
   }
 };
 
@@ -162,7 +206,11 @@ export const deleteFeeException = async (
 
     // Ensure 'id' is not null and can be converted to a string
     if (!idValue || typeof idValue !== "string") {
-      return { success: false, error: true, message: "Invalid fee exception ID" };
+      return {
+        success: false,
+        error: true,
+        message: "Invalid fee exception ID",
+      };
     }
 
     const currentException = await prisma.feeException.findUnique({
@@ -170,27 +218,31 @@ export const deleteFeeException = async (
     });
 
     if (!currentException) {
-      return { success: false, error: true, message: "Fee exception not found" };
+      return {
+        success: false,
+        error: true,
+        message: "Fee exception not found",
+      };
     }
 
     const exception = await prisma.feeException.update({
       where: { id: idValue },
       data: {
-        status: 'CANCELLED',
+        status: "CANCELLED",
         endDate: new Date(),
       },
     });
 
     // Log exception deletion/cancellation
     await logFeeChange({
-      entityType: 'FEE_EXCEPTION',
+      entityType: "FEE_EXCEPTION",
       entityId: idValue,
-      action: 'DELETE',
+      action: "DELETE",
       changes: {
         old: currentException,
         new: exception,
       },
-      performedBy: 'SYSTEM',
+      performedBy: "SYSTEM",
       feeAmountChange: {
         feeTemplateId: exception.feeTemplateId,
         previousAmount: calculateAdjustedAmount(
@@ -199,7 +251,7 @@ export const deleteFeeException = async (
           currentException.adjustmentValue
         ),
         newAmount: currentException.adjustmentValue, // Reverting to original amount
-        reason: 'Exception cancelled',
+        reason: "Exception cancelled",
       },
     });
 
@@ -210,15 +262,22 @@ export const deleteFeeException = async (
     };
   } catch (err) {
     console.error(err);
-    return { success: false, error: true, message: "Failed to delete fee exception" };
+    return {
+      success: false,
+      error: true,
+      message: "Failed to delete fee exception",
+    };
   }
 };
 
-
 // Helper function to calculate adjusted amount
-function calculateAdjustedAmount(baseAmount: number, adjustmentType: string, adjustmentValue: number): number {
-  if (adjustmentType === 'PERCENTAGE') {
-    return baseAmount * (1 - (adjustmentValue / 100));
+function calculateAdjustedAmount(
+  baseAmount: number,
+  adjustmentType: string,
+  adjustmentValue: number
+): number {
+  if (adjustmentType === "PERCENTAGE") {
+    return baseAmount * (1 - adjustmentValue / 100);
   }
   return baseAmount - adjustmentValue;
 }

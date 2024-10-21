@@ -56,7 +56,7 @@ export const createClass = async (formData: ClassSchema): Promise<ResponseState>
 };
 
 export const updateClass = async (formData: ClassSchema): Promise<ResponseState> => {
-  console.log(formData)
+  console.log(formData);
   if (!formData.id) {
     return { success: false, error: true, message: "Class ID is required for update." };
   }
@@ -101,11 +101,11 @@ export const updateClass = async (formData: ClassSchema): Promise<ResponseState>
 
     // Handle supervisorId separately
     if (formData.supervisorId !== undefined) {
-      if (formData.supervisorId === "") {
-        // Use Prisma's undefined to set the field to NULL in the database
-        (dataToUpdate as any).supervisorId = undefined;
-      } else {
-        // Validate the supervisorId if it's not empty
+      if (formData.supervisorId === "" || formData.supervisorId === "null") {
+        // Use Prisma's null to set the field to NULL in the database
+        (dataToUpdate as any).supervisorId = null;
+      } else if (formData.supervisorId) {
+        // Validate the supervisorId if it's not empty and not 'null'
         const supervisorExists = await prisma.teacher.findUnique({
           where: { id: formData.supervisorId },
         });

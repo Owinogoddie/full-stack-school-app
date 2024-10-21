@@ -30,6 +30,7 @@ import { deleteTerm } from "@/actions/term-actions";
 import { deleteFeeTemplate } from "@/actions/feetemplate-actions";
 import { deleteFeeException } from "@/actions/fee-exception-actions";
 import { deleteFeeTransaction } from "@/actions/fee-transaction-actions";
+import { deleteSpecialProgramme } from "@/actions/special-programme-actions";
 type ResponseState = {
   success: boolean;
   error: boolean;
@@ -64,6 +65,7 @@ const deleteActionMap: Record<string, DeleteAction> = {
   feeTemplate:deleteFeeTemplate,
   feeException:deleteFeeException,
   feeTransaction:deleteFeeTransaction,
+  specialProgramme:deleteSpecialProgramme,
 
 };
 
@@ -127,6 +129,9 @@ const ExamScheduleForm = dynamic(() => import("./forms/exam-schedule-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const TermForm = dynamic(() => import("./forms/term-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const SpecialProgrammeForm = dynamic(() => import("./forms/special-programme-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const FeeTemplateForm = dynamic(() => import("./forms/fee-template-form"), {
@@ -291,6 +296,14 @@ const forms: {
       type={type}
       data={data}
       setOpen={setOpen}
+    />
+  ),
+  specialProgramme: (setOpen, type, data,relatedData) => (
+    <SpecialProgrammeForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
     />
   ),
     
