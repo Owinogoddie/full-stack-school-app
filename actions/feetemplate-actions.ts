@@ -243,17 +243,13 @@ export const deleteFeeTemplate = async (
   formData: FormData
 ): Promise<ResponseState> => {
   try {
-    // Extract 'id' from formData
     const idValue = formData.get("id");
 
-    // Ensure 'id' is not null and can be converted to a string
     if (!idValue || typeof idValue !== "string") {
       return { success: false, error: true, message: "Invalid fee template ID" };
     }
 
-    // Use a transaction to ensure all operations succeed or fail together
     await prisma.$transaction(async (prismaTransaction) => {
-      // Find the template to be deleted
       const template = await prismaTransaction.feeTemplate.findUnique({
         where: { id: idValue },
         include: {
@@ -276,22 +272,22 @@ export const deleteFeeTemplate = async (
       });
 
       // Delete related FeeException records
-      // await prismaTransaction.feeException.deleteMany({
-      //   where: { feeTemplateId: idValue },
-      // });
+      await prismaTransaction.feeException.deleteMany({
+        where: { feeTemplateId: idValue },
+      });
 
-      // Delete related FeeTransaction records
+      // Delete related FeeAllocation records
+      await prismaTransaction.feeAllocation.deleteMany({
+        where: { feeTemplateId: idValue },
+      });
+
+      // Delete FeeTransaction records
       await prismaTransaction.feeTransaction.deleteMany({
         where: { feeTemplateId: idValue },
       });
 
       // Delete related FeeHistory records
       await prismaTransaction.feeHistory.deleteMany({
-        where: { feeTemplateId: idValue },
-      });
-
-      // Delete related FeeAllocation records
-      await prismaTransaction.feeAllocation.deleteMany({
         where: { feeTemplateId: idValue },
       });
 
@@ -310,34 +306,20 @@ export const deleteFeeTemplate = async (
         where: { id: idValue },
       });
 
-      // Log template deletion
-      // await prismaTransaction.feeChangeLog.create({
-      //   data: {
-      //     entityType: 'FEE_TEMPLATE',
-      //     entityId: idValue,
-      //     action: 'DELETE',
-      //     changes: {
-      //       deletedTemplate: template,
-      //     },
-      //     performedBy: 'SYSTEM',
-      //   },
-      // });
-
       return template;
     });
 
-    return { 
-      success: true, 
-      error: false, 
-      message: "Fee template and all related records deleted successfully" 
+    return {
+      success: true,
+      error: false,
+      message: "Fee template and all related records deleted successfully"
     };
-
   } catch (err) {
     console.error(err);
-    return { 
-      success: false, 
-      error: true, 
-      message: err instanceof Error ? err.message : "Failed to delete fee template" 
+    return {
+      success: false,
+      error: true,
+      message: err instanceof Error ? err.message : "Failed to delete fee template"
     };
   }
 };
