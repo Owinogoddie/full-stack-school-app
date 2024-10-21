@@ -17,7 +17,7 @@ export interface UnpaidFeeStudent {
   }[];
   totalBalance: number;
   creditBalance: number;
-  netBalance: number;
+  // netBalance: number;
 }
 
 export interface PaymentInput {
@@ -114,7 +114,6 @@ export async function getUnpaidFees({
       },
     });
 
-
     const unpaidFeeStudents: UnpaidFeeStudent[] = students
       .map((student) => {
         const applicableFeeTemplates = feeTemplates.filter(template => 
@@ -149,29 +148,33 @@ export async function getUnpaidFees({
               }
             }
 
-            return {
-              id: template.feeTypeId,
-              name: template.feeType.name,
-              amount: template.baseAmount,
-              adjustedAmount: adjustedAmount,
-              paid: totalPaid,
-              balance: adjustedAmount - totalPaid,
-              feeTemplateId: template.id,
-              exceptionInfo,
-              specialProgramme: template.specialProgramme?.name || null,
-            };
+            const balance = adjustedAmount - totalPaid;
+
+            // Only return fee types with a positive balance
+            if (balance > 0) {
+              return {
+                id: template.feeTypeId,
+                name: template.feeType.name,
+                amount: template.baseAmount,
+                paid: totalPaid,
+                balance: balance,
+                feeTemplateId: template.id,
+                exceptionInfo,
+              };
+            }
+            return null;
           })
-          .filter((fee) => fee.balance > 0);
-          const totalBalance = feeTypeBalances.reduce(
-            (sum, fee) => sum + fee.balance,
-            0
-          );
-  
-          const creditBalance = student.studentCreditBalances.reduce(
-            (sum, balance) => sum + balance.amount,
-            0
-          );
-        const netBalance = Math.max(totalBalance - creditBalance, 0);
+          .filter((fee): fee is NonNullable<typeof fee> => fee !== null); // Type guard to remove null values
+
+        const totalBalance = feeTypeBalances.reduce(
+          (sum, fee) => sum + fee.balance,
+          0
+        );
+
+        const creditBalance = student.studentCreditBalances.reduce(
+          (sum, balance) => sum + balance.amount,
+          0
+        );
 
         return {
           studentId: student.id,
@@ -181,10 +184,9 @@ export async function getUnpaidFees({
           feeTypes: feeTypeBalances,
           totalBalance: totalBalance,
           creditBalance: creditBalance,
-          netBalance: netBalance,
         };
       })
-      .filter((student) => student.netBalance > 0);
+      .filter((student) => student.feeTypes.length > 0);
 
     return unpaidFeeStudents;
   } catch (error) {
@@ -192,7 +194,6 @@ export async function getUnpaidFees({
     throw error;
   }
 }
-
 
 export async function processBulkPayment(
   payments: PaymentInput[]
@@ -210,10 +211,10 @@ export async function processBulkPayment(
         let amountToAllocate = payment.amount;
         let usedCreditBalance = 0;
 
-        // If using credit balance, add it to the amount to allocate
+        // If using credit balance, calculate the amount to use
         if (payment.useCreditBalance && studentCreditBalance) {
           usedCreditBalance = Math.min(studentCreditBalance.amount, payment.amount);
-          amountToAllocate += usedCreditBalance;
+          amountToAllocate = payment.amount + usedCreditBalance;
         }
 
         // Get fee templates and balances
@@ -342,7 +343,6 @@ export async function processBulkPayment(
     };
   }
 }
-
 async function generateReceiptNumber(tx: any) {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);
