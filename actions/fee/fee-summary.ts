@@ -1,7 +1,25 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-
+export interface FeeExemptionDetail {
+  feeTypeName: string;
+  amount: number;
+  type: string;
+  adjustmentType: string;
+}
+export interface FeeBreakdownItem {
+  feeTypeId: string;
+  feeTypeName: string;
+  amount: number;
+  paid: number;
+  exemptions: FeeExemption[];
+  balance: number;
+}
+export interface FeeExemption {
+  type: string;
+  amount: number;
+  adjustmentType: string;
+}
 export interface StudentFeeSummary {
   studentId: string;
   admissionNumber: string;
@@ -9,8 +27,11 @@ export interface StudentFeeSummary {
   lastName: string;
   totalExpected: number;
   totalExemptions: number;
-  totalPaid: number;
+  actualPaid: number;
   balance: number;
+  creditBalance: number;
+  feeBreakdown: FeeBreakdownItem[];
+  extraFees: number;
 }
 
 export async function getStudentFeeSummary({
@@ -42,6 +63,7 @@ export async function getStudentFeeSummary({
         classId: true,
         studentCategories: true,
         specialProgrammes: true,
+        studentCreditBalances: true,
         feeTransactions: {
           where: {
             academicYearId,
@@ -53,6 +75,16 @@ export async function getStudentFeeSummary({
               select: {
                 amountAllocated: true,
                 feeTemplateId: true,
+                feeTemplate: {
+                  select: {
+                    feeTypeId: true,
+                    feeType: {
+                      select: {
+                        name: true,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
@@ -77,6 +109,7 @@ export async function getStudentFeeSummary({
                 feeTypeId: true,
                 feeType: {
                   select: {
+                    id: true,
                     name: true,
                   },
                 },
@@ -92,10 +125,7 @@ export async function getStudentFeeSummary({
         academicYearId,
         termId,
         isActive: true,
-        ...(feeTypeIds &&
-          feeTypeIds.length > 0 && {
-            feeTypeId: { in: feeTypeIds },
-          }),
+        ...(feeTypeIds?.length && { feeTypeId: { in: feeTypeIds } }),
       },
       include: {
         feeTemplateGradeClasses: {
@@ -110,7 +140,7 @@ export async function getStudentFeeSummary({
       },
     });
 
-    const summaries: StudentFeeSummary[] = students.map((student) => {
+    return students.map((student) => {
       const applicableTemplates = feeTemplates.filter(
         (template) =>
           template.feeTemplateGradeClasses.some(
@@ -130,96 +160,110 @@ export async function getStudentFeeSummary({
             ))
       );
 
-      let totalExpected = 0;
-      let totalExemptions = 0;
-      let totalPaid = 0;
-
-      // Create an object to track fee type totals
-      const feeTypeTotals: { [key: string]: number } = {};
-
-      // Calculate total expected amount and aggregate by fee type
-      applicableTemplates.forEach((template) => {
-        const templateAmount = template.baseAmount;
-        totalExpected += templateAmount;
-
-        // Aggregate amounts by fee type
-        if (!feeTypeTotals[template.feeTypeId]) {
-          feeTypeTotals[template.feeTypeId] = 0;
+      // Group templates by fee type
+      const feeTypeGroups = applicableTemplates.reduce((acc, template) => {
+        const feeTypeId = template.feeTypeId;
+        if (!acc[feeTypeId]) {
+          acc[feeTypeId] = {
+            feeTypeId,
+            feeTypeName: template.feeType.name,
+            templates: [],
+          };
         }
-        feeTypeTotals[template.feeTypeId] += templateAmount;
-      });
+        acc[feeTypeId].templates.push(template);
+        return acc;
+      }, {} as Record<string, { feeTypeId: string; feeTypeName: string; templates: typeof applicableTemplates }>);
 
-      // Process exceptions once per fee type
-      const processedFeeTypes = new Set();
+      // Calculate fee breakdown
+      const feeBreakdown: FeeBreakdownItem[] = Object.values(feeTypeGroups).map(
+        ({ feeTypeId, feeTypeName, templates }) => {
+          // Calculate expected amount for this fee type
+          const amount = templates.reduce(
+            (sum, template) => sum + template.baseAmount,
+            0
+          );
 
-      // Group exceptions by fee type
-      const exceptionsByFeeType: { [key: string]: any[] } = {};
-      student.feeExceptions.forEach((exception) => {
-        const feeTypeId = exception.feeTemplate.feeTypeId;
-        if (!exceptionsByFeeType[feeTypeId]) {
-          exceptionsByFeeType[feeTypeId] = [];
-        }
-        exceptionsByFeeType[feeTypeId].push(exception);
-      });
+          // Calculate exemptions for this fee type
+          const exemptions: FeeExemption[] = student.feeExceptions
+            .filter(
+              (exception) => exception.feeTemplate.feeTypeId === feeTypeId
+            )
+            .map((exception) => {
+              let exemptionAmount = 0;
+              if (exception.adjustmentType === "PERCENTAGE") {
+                exemptionAmount = amount * (exception.adjustmentValue / 100);
+              } else {
+                exemptionAmount = Math.min(exception.adjustmentValue, amount);
+              }
+              return {
+                type: exception.type,
+                amount: exemptionAmount,
+                adjustmentType: exception.adjustmentType,
+              };
+            });
 
-      // Process exceptions for each fee type
-      Object.entries(feeTypeTotals).forEach(([feeTypeId, totalAmount]) => {
-        if (!processedFeeTypes.has(feeTypeId)) {
-          const exceptions = exceptionsByFeeType[feeTypeId] || [];
-
-          exceptions.forEach((exception) => {
-            let exemptionAmount = 0;
-
-            if (exception.adjustmentType === "PERCENTAGE") {
-              exemptionAmount = totalAmount * (exception.adjustmentValue / 100);
-            } else if (exception.adjustmentType === "FIXED_AMOUNT") {
-              exemptionAmount = Math.min(
-                exception.adjustmentValue,
-                totalAmount
-              );
-            }
-
-            switch (exception.type) {
-              case "DISCOUNT":
-              case "WAIVER":
-              case "SCHOLARSHIP":
-                totalExemptions += exemptionAmount;
-                break;
-              default:
-                console.warn(`Unknown exception type: ${exception.type}`);
-            }
-          });
-
-          processedFeeTypes.add(feeTypeId);
-        }
-      });
-
-      // Calculate total paid amount
-      applicableTemplates.forEach((template) => {
-        const templatePayments = student.feeTransactions.reduce(
-          (sum, transaction) => {
-            const allocation = transaction.allocations.find(
-              (a) => a.feeTemplateId === template.id
+          // Calculate total paid for this fee type
+          const paid = student.feeTransactions.reduce((sum, transaction) => {
+            const relevantAllocations = transaction.allocations.filter(
+              (allocation) =>
+                templates.some(
+                  (template) => template.id === allocation.feeTemplateId
+                )
             );
-            return sum + (allocation ? allocation.amountAllocated : 0);
-          },
-          0
-        );
+            return (
+              sum +
+              relevantAllocations.reduce(
+                (allocationSum, allocation) =>
+                  allocationSum + allocation.amountAllocated,
+                0
+              )
+            );
+          }, 0);
 
-        totalPaid += templatePayments;
-      });
+          // Calculate total exemptions for this fee type
+          const totalExemptions = exemptions.reduce(
+            (sum, exemption) => sum + exemption.amount,
+            0
+          );
 
-      const balance = totalExpected - totalExemptions - totalPaid;
+          // Calculate balance for this fee type
+          const balance = amount - totalExemptions - paid;
 
-      // Debug final calculations
-      // console.log("Final calculations:", {
-      //   student: `${student.firstName} ${student.lastName}`,
-      //   totalExpected,
-      //   totalExemptions,
-      //   totalPaid,
-      //   balance,
-      // });
+          return {
+            feeTypeId,
+            feeTypeName,
+            amount,
+            paid,
+            exemptions,
+            balance,
+          };
+        }
+      );
 
+      // Calculate totals
+      const totalExpected = feeBreakdown.reduce(
+        (sum, item) => sum + item.amount,
+        0
+      );
+      const totalExemptions = feeBreakdown.reduce(
+        (sum, item) =>
+          sum +
+          item.exemptions.reduce(
+            (exemptionSum, exemption) => exemptionSum + exemption.amount,
+            0
+          ),
+        0
+      );
+      const actualPaid = feeBreakdown.reduce((sum, item) => sum + item.paid, 0);
+
+      // Calculate final balance and credit
+      const netBalance = totalExpected - totalExemptions - actualPaid;
+      const balance = Math.max(0, netBalance);
+      const creditBalance = Math.max(0, -netBalance);
+      const extraFees = student.studentCreditBalances.reduce(
+        (sum, balance) => sum + balance.amount,
+        0
+      );
       return {
         studentId: student.id,
         admissionNumber: student.admissionNumber,
@@ -227,12 +271,13 @@ export async function getStudentFeeSummary({
         lastName: student.lastName,
         totalExpected,
         totalExemptions,
-        totalPaid,
+        actualPaid,
         balance,
+        creditBalance,
+        feeBreakdown,
+        extraFees,
       };
     });
-
-    return summaries;
   } catch (error) {
     console.error("Error in getStudentFeeSummary:", error);
     throw error;

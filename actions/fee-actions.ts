@@ -208,13 +208,13 @@ export async function processBulkPayment(
           where: { studentId: payment.studentId },
         });
 
-        let amountToAllocate = payment.amount;
+        let actualPaymentAmount = payment.amount;
         let usedCreditBalance = 0;
 
         // If using credit balance, calculate the amount to use
         if (payment.useCreditBalance && studentCreditBalance) {
           usedCreditBalance = Math.min(studentCreditBalance.amount, payment.amount);
-          amountToAllocate = payment.amount + usedCreditBalance;
+          actualPaymentAmount = Math.max(0, payment.amount - usedCreditBalance);
         }
 
         // Get fee templates and balances
@@ -257,7 +257,7 @@ export async function processBulkPayment(
         );
 
         // Calculate allocations
-        let remainingAmount = amountToAllocate;
+        let remainingAmount = actualPaymentAmount + usedCreditBalance;
         const allocations = [];
 
         for (const { template, balance } of balances) {
@@ -306,8 +306,7 @@ export async function processBulkPayment(
         // Create transaction
         const transaction = await tx.feeTransaction.create({
           data: {
-            amount: payment.amount,
-            // creditBalanceUsed: usedCreditBalance,
+            amount: actualPaymentAmount + usedCreditBalance,
             paymentDate: new Date(),
             method: usedCreditBalance > 0 ? "CREDITBALANCE" : "BULK",
             studentId: payment.studentId,
