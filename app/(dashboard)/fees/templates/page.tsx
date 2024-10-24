@@ -1,3 +1,4 @@
+// app/feeTemplates/page.tsx
 import { Suspense } from 'react';
 import { AppError, handleError } from '@/lib/error-handler';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -5,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma } from "@prisma/client";
 import FeeTemplateList from './FeeTemplateList';
+
 
 async function fetchFeeTemplates(searchParams: { [key: string]: string | undefined }) {
   const { page, search, ...queryParams } = searchParams;
@@ -17,7 +19,6 @@ async function fetchFeeTemplates(searchParams: { [key: string]: string | undefin
       { academicYear: { year: { contains: search, mode: 'insensitive' } } },
       { feeType: { name: { contains: search, mode: 'insensitive' } } },
       { term: { name: { contains: search, mode: 'insensitive' } } },
-      { specialProgramme: { name: { contains: search, mode: 'insensitive' } } },
     ];
   }
 
@@ -34,12 +35,6 @@ async function fetchFeeTemplates(searchParams: { [key: string]: string | undefin
           case "feeTypeId":
             query.feeTypeId = value;
             break;
-          case "studentCategoryId":
-            query.studentCategories = { some: { id: value } };
-            break;
-          case "specialProgrammeId":
-            query.specialProgrammeId = value;
-            break;
           default:
             break;
         }
@@ -48,37 +43,20 @@ async function fetchFeeTemplates(searchParams: { [key: string]: string | undefin
   }
 
   try {
-    const [rawData, count] = await prisma.$transaction([
+    const [data, count] = await prisma.$transaction([
       prisma.feeTemplate.findMany({
         where: query,
         include: {
           term: true,
           feeType: true,
-          studentCategories: true,
           academicYear: true,
-          specialProgramme: true,
-          feeTemplateGradeClasses: {
-            include: {
-              grade: true,
-              class: true,
-            },
-          }, // Include grade and class in FeeTemplateGradeClass
+          school: true,
         },
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),
       }),
       prisma.feeTemplate.count({ where: query }),
     ]);
-
-    // Transform gradeClasses into the needed format
-    const data = rawData.map((item) => ({
-      ...item,
-      gradeClasses: item.feeTemplateGradeClasses.map(gc => ({
-        gradeId: gc.gradeId,
-        gradeName: gc.grade.levelName,
-        classes: [{ id: gc.classId, name: gc.class.name }],
-      })),
-    }));
 
     return { data, count };
   } catch (error) {
@@ -87,11 +65,11 @@ async function fetchFeeTemplates(searchParams: { [key: string]: string | undefin
   }
 }
 
-export default async function FeeTemplateListPage({
-  searchParams,
-}: {
+interface PageProps {
   searchParams: { [key: string]: string | undefined };
-}) {
+}
+
+export default async function FeeTemplateListPage({ searchParams }: PageProps) {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <FeeTemplateListContent searchParams={searchParams} />
@@ -99,11 +77,7 @@ export default async function FeeTemplateListPage({
   );
 }
 
-async function FeeTemplateListContent({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | undefined };
-}) {
+async function FeeTemplateListContent({ searchParams }: PageProps) {
   try {
     const { data, count } = await fetchFeeTemplates(searchParams);
     return <FeeTemplateList data={data} count={count} searchParams={searchParams} />;

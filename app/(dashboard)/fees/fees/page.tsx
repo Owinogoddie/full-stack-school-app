@@ -1,24 +1,19 @@
+// app/(dashboard)/fees/page.tsx
 import { Suspense } from 'react';
 import { AppError, handleError } from '@/lib/error-handler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma } from "@prisma/client";
-import FeeTypeList from './FeeTypeList';
+import FeeList from './FeeList';
 
-async function fetchFeeTypes(searchParams: { [key: string]: string | undefined }) {
-  const { page, search, schoolId, sort, order, ...queryParams } = searchParams;
+async function fetchFees(searchParams: { [key: string]: string | undefined }) {
+  const { page, search, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
-  const query: Prisma.FeeTypeWhereInput = {};
-  const orderBy: Prisma.FeeTypeOrderByWithRelationInput = {};
+  // URL PARAMS CONDITION
+  const query: Prisma.FeeWhereInput = {};
 
-  // Add schoolId filter if provided
-  if (schoolId) {
-    query.schoolId = schoolId;
-  }
-
-  // Add search functionality
   if (search) {
     query.OR = [
       { name: { contains: search, mode: 'insensitive' } },
@@ -26,23 +21,18 @@ async function fetchFeeTypes(searchParams: { [key: string]: string | undefined }
     ];
   }
 
-  // Add sorting
-  if (sort) {
-    orderBy[sort as keyof Prisma.FeeTypeOrderByWithRelationInput] = order === 'desc' ? 'desc' : 'asc';
-  } else {
-    orderBy.createdAt = 'desc';
-  }
-
-  // Add additional filters
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
         switch (key) {
-          case "name":
-            query.name = { equals: value };
+          case "templateId":
+            query.templateId = value;
             break;
-          case "amount":
-            query.amount = { equals: parseFloat(value) };
+          case "termId":
+            query.termId = value;
+            break;
+          case "academicYearId":
+            query.academicYearId = parseInt(value);
             break;
           default:
             break;
@@ -53,23 +43,25 @@ async function fetchFeeTypes(searchParams: { [key: string]: string | undefined }
 
   try {
     const [data, count] = await prisma.$transaction([
-      prisma.feeType.findMany({
+      prisma.fee.findMany({
         where: query,
         include: {
-          school: true,
-          feeTemplates: {
+          template: {
             include: {
-              academicYear: true,
-              term: true,
-              exceptions: true,
+              feeType: true,
             }
-          }
+          },
+          term: true,
+          academicYear: true,
+          grades: true,
+          classes: true,
+          studentCategories: true,
+          specialPrograms: true,
         },
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),
-        orderBy
       }),
-      prisma.feeType.count({ where: query }),
+      prisma.fee.count({ where: query }),
     ]);
 
     return { data, count };
@@ -78,26 +70,26 @@ async function fetchFeeTypes(searchParams: { [key: string]: string | undefined }
   }
 }
 
-export default async function FeeTypeListPage({
+export default async function FeeListPage({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
 }) {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <FeeTypeListContent searchParams={searchParams} />
+      <FeeListContent searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function FeeTypeListContent({
+async function FeeListContent({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
 }) {
   try {
-    const { data, count } = await fetchFeeTypes(searchParams);
-    return <FeeTypeList data={data} count={count} searchParams={searchParams} />;
+    const { data, count } = await fetchFees(searchParams);
+    return <FeeList data={data} count={count} searchParams={searchParams} />;
   } catch (error) {
     if (error instanceof AppError) {
       return <ErrorDisplay message={error?.message || "Something went wrong"} />;

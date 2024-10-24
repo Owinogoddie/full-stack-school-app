@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Select, { SingleValue, MultiValue } from 'react-select';
 
-//option types
+// option types
 type SingleOptionType = {
   value: string | number;
   label: string;
@@ -23,17 +23,25 @@ const schema = z.object({
   termId: z.string().min(1, 'Term is required'),
   gradeId: z.coerce.number().optional(),
   classIds: z.array(z.coerce.number()).min(1, 'At least one class must be selected'),
-  feeTypeIds: z.array(z.string()).min(1, 'At least one fee type must be selected')
+  feeIds: z.array(z.string()).min(1, 'At least one fee must be selected')
 });
 
 type FormData = z.infer<typeof schema>;
 
 interface InitialData {
   academicYears: { id: number; year: string }[];
-  terms: { id: string; name: string; academicYearId: number }[]; // Added academicYearId
+  terms: { id: string; name: string; academicYearId: number }[];
   grades: { id: number; name: string }[];
   classes: { id: number; name: string; gradeId: number }[];
-  feeTypes: { id: string; name: string }[];
+  fees: {
+    id: string;
+    name: string;
+    description: string | null;
+    amount: number;
+    academicYearId: number | null;
+    termId: string | null;
+    feeTypeId: string | null;
+  }[];
 }
 
 interface BulkFeePaymentModalProps {
@@ -47,6 +55,7 @@ export default function BulkFeePaymentModal({
 }: BulkFeePaymentModalProps) {
   const [filteredTerms, setFilteredTerms] = useState(initialData.terms);
   const [filteredClasses, setFilteredClasses] = useState(initialData.classes);
+  const [filteredFees, setFilteredFees] = useState(initialData.fees);
 
   const {
     control,
@@ -58,12 +67,13 @@ export default function BulkFeePaymentModal({
     resolver: zodResolver(schema),
     defaultValues: {
       classIds: [],
-      feeTypeIds: []
+      feeIds: []
     }
   });
 
   const selectedAcademicYearId = watch('academicYearId');
   const selectedGradeId = watch('gradeId');
+  const selectedTermId = watch('termId');
 
   // Filter terms when academic year changes
   useEffect(() => {
@@ -73,6 +83,7 @@ export default function BulkFeePaymentModal({
       );
       setFilteredTerms(terms);
       setValue('termId', ''); // Reset selected term
+      setValue('feeIds', []); // Reset selected fees
     }
   }, [selectedAcademicYearId, initialData.terms, setValue]);
 
@@ -89,6 +100,20 @@ export default function BulkFeePaymentModal({
       setFilteredClasses(initialData.classes);
     }
   }, [selectedGradeId, initialData.classes, setValue]);
+
+  // Filter fees based on academic year and term
+  useEffect(() => {
+    if (selectedAcademicYearId && selectedTermId) {
+      const fees = initialData.fees.filter(
+        fee => 
+          fee.academicYearId === selectedAcademicYearId && 
+          fee.termId === selectedTermId
+      );
+      setFilteredFees(fees);
+    } else {
+      setFilteredFees([]);
+    }
+  }, [selectedAcademicYearId, selectedTermId, initialData.fees]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -188,6 +213,7 @@ export default function BulkFeePaymentModal({
             )}
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Classes
@@ -221,39 +247,38 @@ export default function BulkFeePaymentModal({
           )}
         </div>
 
-        {/* Fee Types section remains the same */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fee Types
+            Fees
           </label>
           <Controller
-            name="feeTypeIds"
+            name="feeIds"
             control={control}
             render={({ field }) => (
               <Select<MultiOptionType, true>
                 {...field}
                 isMulti
-                options={initialData.feeTypes.map(feeType => ({
-                  value: feeType.id,
-                  label: feeType.name
+                options={filteredFees.map(fee => ({
+                  value: fee.id,
+                  label: `${fee.name} (${fee.amount})`
                 }))}
                 onChange={(newValue: MultiValue<MultiOptionType>) => {
                   field.onChange(newValue.map(item => item.value));
                 }}
-                value={initialData.feeTypes
-                  .filter(feeType => field.value?.includes(feeType.id))
-                  .map(feeType => ({
-                    value: feeType.id,
-                    label: feeType.name
+                value={filteredFees
+                  .filter(fee => field.value?.includes(fee.id))
+                  .map(fee => ({
+                    value: fee.id,
+                    label: `${fee.name} (${fee.amount})`
                   }))}
                 className="basic-select"
                 classNamePrefix="select"
               />
             )}
           />
-          {errors.feeTypeIds && (
+          {errors.feeIds && (
             <p className="mt-1 text-sm text-red-600">
-              {errors.feeTypeIds.message}
+              {errors.feeIds.message}
             </p>
           )}
         </div>

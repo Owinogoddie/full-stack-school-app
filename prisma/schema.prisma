@@ -2,6 +2,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// dd
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -210,7 +211,7 @@ model Student {
   specializedPrograms SpecializedProgram[]
   healthRecord        HealthRecord?
   ledgerEntries       LedgerEntry[]
-  currentBalance      Decimal              @default(0)
+  currentBalance      Float              @default(0)
   lastLedgerEntry     DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -373,55 +374,72 @@ model FeeType {
 }
 
 model FeeTemplate {
-  id             String       @id @default(uuid())
-  school         School?      @relation(fields: [schoolId], references: [id])
+  id             String         @id @default(uuid())
+  school         School?        @relation(fields: [schoolId], references: [id])
   schoolId       String?
   academicYearId Int
-  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
   termId         String
-  term           Term         @relation(fields: [termId], references: [id])
+  term           Term           @relation(fields: [termId], references: [id])
   feeTypeId      String
-  feeType        FeeType      @relation(fields: [feeTypeId], references: [id])
+  feeType        FeeType        @relation(fields: [feeTypeId], references: [id])
   baseAmount     Float
-  version        Int          @default(1)
-  isActive       Boolean      @default(true)
+  version        Int            @default(1)
+  isActive       Boolean        @default(true)
   fees           Fee[]
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  exceptions     FeeException[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model FeeException {
-  id            String        @id @default(uuid())
+  id            String          @id @default(uuid())
   studentId     String
-  student       Student       @relation(fields: [studentId], references: [id])
+  student       Student         @relation(fields: [studentId], references: [id])
   exceptionType ExceptionType
+  status        ExceptionStatus @default(PENDING)
+  feeTemplateId String
+  feeTemplate   FeeTemplate    @relation(fields: [feeTemplateId], references: [id])
   feeTypeId     String
-  feeType       FeeType       @relation(fields: [feeTypeId], references: [id])
-  feeId         String? // For exceptions on specific fee instances
-  fee           Fee?          @relation(fields: [feeId], references: [id]) // Added fields and references
-  amount        Decimal?
-  percentage    Decimal?
+  feeType       FeeType        @relation(fields: [feeTypeId], references: [id])
+  feeId         String?
+  fee           Fee?           @relation(fields: [feeId], references: [id])
+  amountType    AmountType @default(FIXED)
+  amount        Float?
+  percentage    Float?
   startDate     DateTime
   endDate       DateTime?
   description   String?
   approvedBy    String?
   reason        String?
   ledgerEntries LedgerEntry[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
+enum AmountType {
+  FIXED
+  PERCENTAGE
+}
+enum ExceptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  ACTIVE
+  SUSPENDED
+}
 model Fee {
   id                String             @id @default(uuid())
   name              String
   description       String?
-  amount            Decimal
+  amount            Float
   termId            String?
   term              Term?              @relation(fields: [termId], references: [id])
   academicYearId    Int?
   academicYear      AcademicYear?      @relation(fields: [academicYearId], references: [id])
-  feeTypeId         String
-  feeType           FeeType            @relation(fields: [feeTypeId], references: [id])
+  feeTypeId         String?
+  feeType           FeeType ?           @relation(fields: [feeTypeId], references: [id])
   templateId        String?
   template          FeeTemplate?       @relation(fields: [templateId], references: [id])
   feeExceptions     FeeException[]
@@ -442,9 +460,9 @@ model Payment {
   student       Student          @relation(fields: [studentId], references: [id])
   feeId         String
   fee           Fee              @relation(fields: [feeId], references: [id])
-  amount        Decimal
+  amount        Float
   paymentDate   DateTime         @default(now())
-  receiptNumber String           @unique
+  receiptNumber String           
   paymentMethod PaymentMethod
   status        PaymentStatus
   transactions  FeeTransaction[]
@@ -457,7 +475,7 @@ model FeeTransaction {
   id              String       @id @default(uuid())
   paymentId       String
   payment         Payment      @relation(fields: [paymentId], references: [id])
-  amount          Decimal
+  amount          Float
   transactionType String?
   description     String?
   termId          String
@@ -473,7 +491,7 @@ model StudentCreditBalance {
   studentId String       @unique
   student   Student      @relation(fields: [studentId], references: [id])
   amount    Float
-  status    CreditStatus @default(AVAILABLE)
+  status    CreditStatus @default(ACTIVE)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 }
@@ -487,9 +505,9 @@ model LedgerEntry {
   description String
 
   // Amount fields
-  debit          Decimal @default(0) // Amounts student owes
-  credit         Decimal @default(0) // Amounts paid/credited
-  runningBalance Decimal // Current balance after this entry
+  debit          Float @default(0) // Amounts student owes
+  credit         Float @default(0) // Amounts paid/credited
+  runningBalance Float // Current balance after this entry
 
   // Related records
   feeId       String?
@@ -902,31 +920,43 @@ model Resource {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 }
-
 enum ExceptionType {
-  SIBLING_DISCOUNT // For families with multiple children
-  STAFF_CHILD // For children of staff members
-  MERIT_SCHOLARSHIP // Based on academic performance
-  SPORTS_SCHOLARSHIP // For sports excellence
-  FINANCIAL_AID // Need-based financial assistance
-  EARLY_PAYMENT // Discount for early fee payment
-  FULL_PAYMENT // Discount for paying full year at once
-  HARDSHIP // Temporary financial hardship cases
-  SPECIAL_CONSIDERATION // For exceptional cases approved by board
-  LOYALTY_DISCOUNT // For long-term students (e.g., 5+ years)
-  ALUMNI_CHILD // For children of alumni
-  DISABILITY_SUPPORT // For students with special needs
-  REFUGEE_STATUS // For refugee or asylum seeker students
-  CULTURAL_PROGRAM // For students in specific cultural programs
+  DISCOUNT
+  SCHOLARSHIP
+  WAIVER
+  ADJUSTMENT
+  DISABILITY_SUPPORT
+  FINANCIAL_AID
 }
 
+// enum ExceptionType {
+//   DISCOUNT
+//   SCHOLARSHIP
+//   WAIVER
+//   ADJUSTMENT
+//   DISABILITY_SUPPORT
+// FINANCIAL_AID
+
+// //   SIBLING_DISCOUNT // For families with multiple children
+// //   STAFF_CHILD // For children of staff members
+// //   MERIT_SCHOLARSHIP // Based on academic performance
+// //   SPORTS_SCHOLARSHIP // For sports excellence
+// //    // Need-based financial assistance
+// //   EARLY_PAYMENT // Discount for early fee payment
+// //   FULL_PAYMENT // Discount for paying full year at once
+// //   HARDSHIP // Temporary financial hardship cases
+// //   SPECIAL_CONSIDERATION // For exceptional cases approved by board
+// //   LOYALTY_DISCOUNT // For long-term students (e.g., 5+ years)
+// //   ALUMNI_CHILD // For children of alumni
+// //    // For students with special needs
+// //   REFUGEE_STATUS // For refugee or asylum seeker students
+// //   CULTURAL_PROGRAM // For students in specific cultural programs
+// }
+
 enum CreditStatus {
-  AVAILABLE // Credit can be used
-  RESERVED // Credit is allocated for future fee
-  USED // Credit has been applied to a fee
-  REFUNDED // Credit has been refunded to student
-  EXPIRED // Credit has expired
-  TRANSFERRED // Credit transferred to another student
+  ACTIVE // Credit can be used
+  EXPIRED // Credit is allocated for future fee
+  CANCELLED // Credit has been applied to a fee
 }
 
 enum ProgramType {

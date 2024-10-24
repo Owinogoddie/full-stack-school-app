@@ -9,14 +9,18 @@ import {
   getTerms,
   getGrades,
   getClasses,
-  getFeeTypes,
+  getFees,
 } from "@/actions/fee/data-fetching";
 
 async function fetchInitialData() {
   try {
-    const [academicYears, terms, grades, classes, feeTypes] = await Promise.all(
-      [getAcademicYears(), getTerms(), getGrades(), getClasses(), getFeeTypes()]
-    );
+    const [academicYears, terms, grades, classes, fees] = await Promise.all([
+      getAcademicYears(),
+      getTerms(),
+      getGrades(),
+      getClasses(),
+      getFees(),
+    ]);
 
     return {
       academicYears,
@@ -34,7 +38,15 @@ async function fetchInitialData() {
         name: cls.name,
         gradeId: cls.gradeId,
       })),
-      feeTypes,
+      fees: fees.map(fee => ({
+        id: fee.id,
+        name: fee.name,
+        description: fee.description,
+        amount: fee.amount,
+        academicYearId: fee.academicYearId,
+        termId: fee.termId,
+        feeTypeId: fee.feeTypeId
+      }))
     };
   } catch (error) {
     throw handleError(error);
@@ -52,13 +64,10 @@ export default async function BulkFeePaymentPage() {
 async function BulkFeePaymentContent() {
   try {
     const initialData = await fetchInitialData();
-
     return <BulkFeePaymentClient initialData={initialData} />;
   } catch (error) {
     if (error instanceof AppError) {
-      return (
-        <ErrorDisplay message={error?.message || "Something went wrong"} />
-      );
+      return <ErrorDisplay message={error?.message || "Something went wrong"} />;
     }
     return <ErrorDisplay message="An unexpected error occurred" />;
   }

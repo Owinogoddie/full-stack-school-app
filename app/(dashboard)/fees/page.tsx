@@ -35,6 +35,13 @@ const menuItems = [
     description: 'Configure fee structures'
   },
   { 
+    name: 'Student Fees', 
+    icon: ClipboardDocumentListIcon, 
+    href: '/fees/fees',
+    color: 'bg-indigo-50 text-indigo-600',
+    description: 'Students Fees'
+  },
+  { 
     name: 'Fee Structures', 
     icon: ClipboardDocumentListIcon, 
     href: '/fees/structure',

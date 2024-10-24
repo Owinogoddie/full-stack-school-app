@@ -10,20 +10,29 @@ export interface InitialData {
   terms: { id: string; name: string; academicYearId: number }[];
   grades: { id: number; name: string }[];
   classes: { id: number; name: string; gradeId: number }[];
-  feeTypes: { id: string; name: string }[];
+  fees: {
+    id: string;
+    name: string;
+    description: string | null;
+    amount: number;
+    academicYearId: number | null;
+    termId: string | null;
+    feeTypeId: string | null;
+  }[];
 }
-  
+
 export interface SelectedParams {
   academicYearId: number;
   termId: string;
   gradeId?: number;
   classIds: number[];
-  feeTypeIds: string[];
+  feeIds: string[];
 }
-export default function BulkFeePaymentClient({ 
-  initialData 
-}: { 
-  initialData: InitialData 
+
+export default function BulkFeePaymentClient({
+  initialData
+}: {
+  initialData: InitialData
 }) {
   const [showModal, setShowModal] = useState(true);
   const [selectedParams, setSelectedParams] = useState<SelectedParams | null>(null);
@@ -32,11 +41,11 @@ export default function BulkFeePaymentClient({
     term?: string;
     grade?: string;
     classes?: string[];
-    feeTypes?: string[];
+    fees?: string[];
   }>({});
+
   const handleModalSubmit = (params: SelectedParams) => {
     setSelectedParams(params);
-    // Set context information
     setContextInfo({
       academicYear: initialData.academicYears.find(y => y.id === params.academicYearId)?.year,
       term: initialData.terms.find(t => t.id === params.termId)?.name,
@@ -44,8 +53,8 @@ export default function BulkFeePaymentClient({
       classes: initialData.classes
         .filter(c => params.classIds.includes(c.id))
         .map(c => c.name),
-      feeTypes: initialData.feeTypes
-        .filter(f => params.feeTypeIds.includes(f.id))
+      fees: initialData.fees
+        .filter(f => params.feeIds.includes(f.id))
         .map(f => f.name)
     });
     setShowModal(false);
@@ -55,6 +64,7 @@ export default function BulkFeePaymentClient({
     setSelectedParams(null);
     setShowModal(true);
   };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -74,7 +84,7 @@ export default function BulkFeePaymentClient({
           onSubmit={handleModalSubmit}
         />
       ) : selectedParams ? (
-        <BulkFeePaymentForm 
+        <BulkFeePaymentForm
           params={selectedParams}
           {...contextInfo}
         />

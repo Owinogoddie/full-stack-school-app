@@ -1,13 +1,42 @@
+// app/fee-exceptions/page.tsx
 import { Suspense } from 'react';
 import { AppError, handleError } from '@/lib/error-handler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Prisma } from "@prisma/client";
+import { ExceptionStatus, ExceptionType, FeeTemplate, FeeType, Prisma, Student } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 import FeeExceptionList from './FeeExceptionList';
 
-async function fetchFeeExceptions(searchParams: { [key: string]: string | undefined }) {
+export interface FeeExceptionListItem {
+  id: string;
+  student: Student;
+  feeType: FeeType;
+  feeTemplate: (FeeTemplate & {
+    feeType: FeeType;
+  }) | null;
+  status: ExceptionStatus;
+  exceptionType: ExceptionType;
+  amount: number | null;
+  percentage: number | null;
+  startDate: Date;
+  endDate: Date | null;
+  description: string | null;
+  approvedBy: string | null;
+  reason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface FetchFeeExceptionsResult {
+  data: FeeExceptionListItem[];
+  count: number;
+  role: string | undefined;
+}
+
+async function fetchFeeExceptions(
+  searchParams: { [key: string]: string | undefined }
+): Promise<FetchFeeExceptionsResult> {
   const { userId, sessionClaims } = auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;
@@ -15,7 +44,6 @@ async function fetchFeeExceptions(searchParams: { [key: string]: string | undefi
   const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
-  // URL PARAMS CONDITION
   const query: Prisma.FeeExceptionWhereInput = {};
 
   if (queryParams) {
@@ -25,14 +53,17 @@ async function fetchFeeExceptions(searchParams: { [key: string]: string | undefi
           case "feeTemplateId":
             query.feeTemplateId = value;
             break;
+          case "feeTypeId":
+            query.feeTypeId = value;
+            break;
           case "studentId":
             query.studentId = value;
             break;
-          case "type":
-            query.type = value;
+          case "exceptionType":
+            query.exceptionType = value as ExceptionType;
             break;
           case "status":
-            query.status = value;
+            query.status = value as ExceptionStatus;
             break;
           case "search":
             query.OR = [
@@ -51,18 +82,6 @@ async function fetchFeeExceptions(searchParams: { [key: string]: string | undefi
   switch (role) {
     case "admin":
       break;
-    // case "teacher":
-    //   // Adjust this based on your actual data model
-    //   query.feeTemplate = {
-    //     school: {
-    //       staff: {
-    //         some: {
-    //           userId: currentUserId!,
-    //         },
-    //       },
-    //     },
-    //   };
-    //   break;
     case "student":
       query.studentId = currentUserId!;
       break;
@@ -83,10 +102,9 @@ async function fetchFeeExceptions(searchParams: { [key: string]: string | undefi
           feeTemplate: {
             include: {
               feeType: true,
-              academicYear: true,
-              term: true,
             },
           },
+          feeType: true,
           student: true,
         },
         take: ITEM_PER_PAGE,
@@ -95,7 +113,7 @@ async function fetchFeeExceptions(searchParams: { [key: string]: string | undefi
       prisma.feeException.count({ where: query }),
     ]);
 
-    return { data, count, role };
+    return { data, count, role: role || 'user' };
   } catch (error) {
     throw handleError(error);
   }
@@ -120,7 +138,14 @@ async function FeeExceptionsContent({
 }) {
   try {
     const { data, count, role } = await fetchFeeExceptions(searchParams);
-    return <FeeExceptionList data={data} count={count} searchParams={searchParams} role={role} />;
+    return (
+      <FeeExceptionList 
+        data={data} 
+        count={count} 
+        searchParams={searchParams} 
+        role={role || 'user'} 
+      />
+    );
   } catch (error) {
     if (error instanceof AppError) {
       return <ErrorDisplay message={error?.message || "Something went wrong"} />;

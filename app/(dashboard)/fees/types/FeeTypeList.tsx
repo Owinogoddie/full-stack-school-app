@@ -6,13 +6,14 @@ import FormContainer from "@/components/form-container";
 import Pagination from "@/components/pagination";
 import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
-import { FeeType, School, FeeTemplate, FeeException } from "@prisma/client";
+import { FeeType, School, FeeTemplate, FeeException, AcademicYear, Term } from "@prisma/client";
 import Image from "next/image";
 import ClientOnlyComponent from "@/components/client-only-component";
 import { useSession } from "@clerk/nextjs";
-// import { formatCurrency } from "@/lib/utils";
 
 type ExtendedFeeTemplate = FeeTemplate & {
+  academicYear: AcademicYear;
+  term: Term;
   exceptions: FeeException[];
 };
 

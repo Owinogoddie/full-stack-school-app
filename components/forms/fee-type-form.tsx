@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { FeeTypeSchema, feeTypeSchema } from "@/schemas/fee-type-schema";
 import InputField from "../input-field";
-import { createFeeType, updateFeeType } from "@/actions/fee-type-actions";
+import { createFeeType, updateFeeType } from "@/actions/fees/fee-types";
 
 type ResponseState = {
   success: boolean;

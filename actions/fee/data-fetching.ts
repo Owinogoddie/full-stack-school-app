@@ -46,3 +46,30 @@ export async function getClasses(selectedGradeId?: number) {
 export async function getFeeTypes() {
     return await prisma.feeType.findMany();
 }
+export async function getFees(params?: {
+  academicYearId?: number;
+  termId?: string;
+  gradeIds?: number[];
+  classIds?: number[];
+}) {
+  const { academicYearId, termId, gradeIds, classIds } = params || {};
+
+  return prisma.fee.findMany({
+    where: {
+      AND: [
+        academicYearId ? { academicYearId } : {},
+        termId ? { termId } : {},
+        gradeIds?.length ? { grades: { some: { id: { in: gradeIds } } } } : {},
+        classIds?.length ? { classes: { some: { id: { in: classIds } } } } : {},
+      ]
+    },
+    include: {
+      feeType: true,
+      term: true,
+      academicYear: true,
+      grades: true,
+      classes: true
+    },
+    orderBy: { name: 'asc' }
+  });
+}

@@ -1,3 +1,4 @@
+// FeeExceptionForm.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +15,7 @@ import {
 import {
   createFeeException,
   updateFeeException,
-} from "@/actions/fee-exception-actions";
+} from "@/actions/fees/fee-exception-actions";
 import GlobalDataCheck from "../global-data-check-component";
 
 type ResponseState = {
@@ -35,10 +36,13 @@ const FeeExceptionForm = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
+  // const [amountType, setAmountType] = useState(data?.amountType || 'FIXED');
+
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FeeExceptionSchema>({
     resolver: zodResolver(feeExceptionSchema),
@@ -52,8 +56,21 @@ const FeeExceptionForm = ({
         : undefined,
       feeTemplateId: data?.feeTemplateId,
       studentId: data?.studentId,
+      amount: data?.amount,
+      percentage: data?.percentage,
+      amountType: data?.amountType || 'FIXED',
     },
   });
+
+  const currentAmountType = watch('amountType');
+
+  useEffect(() => {
+    if (currentAmountType === 'FIXED') {
+      setValue('percentage', undefined);
+    } else {
+      setValue('amount', undefined);
+    }
+  }, [currentAmountType, setValue]);
 
   const router = useRouter();
 
@@ -87,7 +104,7 @@ const FeeExceptionForm = ({
       state.messages?.forEach((message: string) => toast.error(message));
     }
   }, [state, router, type, setOpen]);
-  console.log(relatedData);
+
   return (
     <GlobalDataCheck relatedData={relatedData}>
       <form className="flex flex-col gap-8" onSubmit={onSubmit}>
@@ -127,29 +144,48 @@ const FeeExceptionForm = ({
               { value: "SCHOLARSHIP", label: "Scholarship" },
               { value: "WAIVER", label: "Waiver" },
               { value: "ADJUSTMENT", label: "Adjustment" },
+              { value: "DISABILITY_SUPPORT", label: "Disability support" },
+              { value: "FINANCIAL_AID", label: "Financial aid" },
             ]}
-            name="type"
+            name="exceptionType"
             register={register}
             setValue={setValue}
-            error={errors.type}
+            error={errors.exceptionType}
           />
           <SelectField
-            label="Adjustment Type"
+            label="Amount Type"
             options={[
+              { value: "FIXED", label: "Fixed Amount" },
               { value: "PERCENTAGE", label: "Percentage" },
-              { value: "FIXED_AMOUNT", label: "Fixed Amount" },
             ]}
-            name="adjustmentType"
+            name="amountType"
             register={register}
             setValue={setValue}
-            error={errors.adjustmentType}
+            error={errors.amountType}
           />
+          {currentAmountType === 'FIXED' && (
+            <InputField
+              label="Amount"
+              name="amount"
+              type="number"
+              register={register}
+              error={errors.amount}
+            />
+          )}
+          {currentAmountType === 'PERCENTAGE' && (
+            <InputField
+              label="Percentage"
+              name="percentage"
+              type="number"
+              register={register}
+              error={errors.percentage}
+            />
+          )}
           <InputField
-            label="Adjustment Value"
-            name="adjustmentValue"
-            type="number"
+            label="Description"
+            name="description"
             register={register}
-            error={errors.adjustmentValue}
+            error={errors.description}
           />
           <InputField
             label="Reason"
@@ -157,6 +193,12 @@ const FeeExceptionForm = ({
             register={register}
             error={errors.reason}
           />
+          {/* <InputField
+            label="Approved By"
+            name="approvedBy"
+            register={register}
+            error={errors.approvedBy}
+          /> */}
           <InputField
             label="Start Date"
             name="startDate"
@@ -171,13 +213,16 @@ const FeeExceptionForm = ({
             register={register}
             error={errors.endDate}
           />
-          
           <SelectField
             label="Status"
             options={[
               { value: "ACTIVE", label: "Active" },
               { value: "EXPIRED", label: "Expired" },
               { value: "CANCELLED", label: "Cancelled" },
+              { value: "PENDING", label: "Pending" },
+              { value: "REJECTED", label: "Rejected" },
+              { value: "APPROVED", label: "Approved" },
+              { value: "SUSPENDED", label: "Suspended" },
             ]}
             name="status"
             register={register}

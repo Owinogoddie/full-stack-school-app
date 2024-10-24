@@ -25,12 +25,13 @@ import { deleteDepartment } from "@/actions/department-actions";
 import { deleteGradeScale } from "@/actions/grade-scale-actions";
 import { deleteExamSchedule } from "@/actions/exam-schedule";
 import { deleteStudentCategory } from "@/actions/student-category-actions";
-import { deleteFeeType } from "@/actions/fee-type-actions";
 import { deleteTerm } from "@/actions/term-actions";
-import { deleteFeeTemplate } from "@/actions/feetemplate-actions";
-import { deleteFeeException } from "@/actions/fee-exception-actions";
+// import { deleteFeeException } from "@/actions/fees/fee-exception-actions";
 import { deleteFeeTransaction } from "@/actions/fee-transaction-actions";
 import { deleteSpecialProgramme } from "@/actions/special-programme-actions";
+import { deleteFeeType } from "@/actions/fees/fee-types";
+import { deleteFeeTemplate } from "@/actions/fees/fee-template-actions";
+import { deleteFee } from "@/actions/fees/fee-actions";
 type ResponseState = {
   success: boolean;
   error: boolean;
@@ -63,9 +64,10 @@ const deleteActionMap: Record<string, DeleteAction> = {
   feeType:deleteFeeType,
   term:deleteTerm,
   feeTemplate:deleteFeeTemplate,
-  feeException:deleteFeeException,
+  // feeException:deleteFeeException,
   feeTransaction:deleteFeeTransaction,
   specialProgramme:deleteSpecialProgramme,
+  fee:deleteFee
 
 };
 
@@ -147,6 +149,9 @@ const FeeTransactionForm = dynamic(() => import("./forms/fee-exception-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const StudedntCategoryForm = dynamic(() => import("./forms/student-category-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const FeeForm = dynamic(() => import("./forms/fee-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -330,6 +335,14 @@ const forms: {
   ),
     feeException: (setOpen, type, data,relatedData) => (
     <FeeExceptionForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+    fee: (setOpen, type, data,relatedData) => (
+    <FeeForm
       type={type}
       data={data}
       setOpen={setOpen}

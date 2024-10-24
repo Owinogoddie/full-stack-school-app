@@ -29,6 +29,7 @@ export type FormContainerProps = {
     | "feeTemplate"
     | "feeTransaction"
     | "feeException"
+    | "fee"
     | "specialProgramme";
   type: "create" | "update" | "delete";
   data?: any;

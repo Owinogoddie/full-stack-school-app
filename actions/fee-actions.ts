@@ -23,7 +23,7 @@ export interface UnpaidFeeStudent {
 export interface PaymentInput {
   studentId: string;
   amount: number;
-  feeTemplateIds: string[];
+  feeIds: string[];
   academicYearId: number;
   termId: string;
   useCreditBalance: boolean;
@@ -42,12 +42,12 @@ export async function getUnpaidFees({
   academicYearId,
   termId,
   classIds,
-  feeTypeIds,
+  feeIds,
 }: {
   academicYearId: number;
   termId: string;
   classIds: number[];
-  feeTypeIds: string[];
+  feeIds: string[];
 }): Promise<UnpaidFeeStudent[]> {
   try {
     const currentDate = new Date();
