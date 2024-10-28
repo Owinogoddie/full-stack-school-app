@@ -1,3 +1,4 @@
+
 // app/bulk-fee-payment/BulkFeePaymentClient.tsx
 'use client';
 
@@ -10,14 +11,19 @@ export interface InitialData {
   terms: { id: string; name: string; academicYearId: number }[];
   grades: { id: number; name: string }[];
   classes: { id: number; name: string; gradeId: number }[];
-  fees: {
+  feeStructures: {
     id: string;
     name: string;
     description: string | null;
     amount: number;
-    academicYearId: number | null;
+    academicYearId: number;
     termId: string | null;
-    feeTypeId: string | null;
+    gradeId: number | null;
+    classId: number | null;
+    categories: {
+      id: string;
+      name: string;
+    }[];
   }[];
 }
 
@@ -26,7 +32,7 @@ export interface SelectedParams {
   termId: string;
   gradeId?: number;
   classIds: number[];
-  feeIds: string[];
+  feeStructureIds: string[];
 }
 
 export default function BulkFeePaymentClient({
@@ -53,8 +59,8 @@ export default function BulkFeePaymentClient({
       classes: initialData.classes
         .filter(c => params.classIds.includes(c.id))
         .map(c => c.name),
-      fees: initialData.fees
-        .filter(f => params.feeIds.includes(f.id))
+      fees: initialData.feeStructures
+        .filter(f => params.feeStructureIds.includes(f.id))
         .map(f => f.name)
     });
     setShowModal(false);

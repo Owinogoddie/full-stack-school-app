@@ -23,14 +23,11 @@ const FeeExceptionList: React.FC<FeeExceptionListProps> = ({
   searchParams, 
   role 
 }) => {
-  const formatNumber = (value: number | null, isPercentage: boolean = false) => {
-    if (value === null) return 'N/A';
-    // Round to 2 decimal places
-    const formattedValue = Number(value).toFixed(2);
-    if (isPercentage) {
-      return `${formattedValue}%`;
-    }
-    return `$${formattedValue}`;
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value);
   };
 
   const columns = [
@@ -39,20 +36,16 @@ const FeeExceptionList: React.FC<FeeExceptionListProps> = ({
       accessor: "student",
     },
     {
-      header: "Fee Type",
-      accessor: "feeType",
-    },
-    {
-      header: "Exception Type",
-      accessor: "exceptionType",
+      header: "Fee Structure",
+      accessor: "feeStructure",
     },
     {
       header: "Amount",
       accessor: "amount",
     },
     {
-      header: "Percentage",
-      accessor: "percentage",
+      header: "Reason",
+      accessor: "reason",
     },
     {
       header: "Start Date",
@@ -64,7 +57,7 @@ const FeeExceptionList: React.FC<FeeExceptionListProps> = ({
     },
     {
       header: "Status",
-      accessor: "status",
+      accessor: "isActive",
     },
     ...(role === "admin"
       ? [
@@ -84,20 +77,26 @@ const FeeExceptionList: React.FC<FeeExceptionListProps> = ({
       <td className="flex items-center gap-4 p-4">
         {item.student.firstName} {item.student.lastName}
       </td>
-      <td>{item.feeType.name}</td>
-      <td>{item.exceptionType}</td>
-<td>{formatNumber(item.amount)}</td>
-<td>{formatNumber(item.percentage, true)}</td>
+<td>{item.feeStructure.feeType.name}-{item.feeStructure.term ? item.feeStructure.term.name : 'N/A'}-{item.feeStructure.academicYear.year}</td>
+      <td>{formatCurrency(item.amount)}</td>
+      <td>{item.reason}</td>
       <td>{new Date(item.startDate).toLocaleDateString()}</td>
       <td>{item.endDate ? new Date(item.endDate).toLocaleDateString() : 'N/A'}</td>
-      <td>{item.status}</td>
+      <td>
+        <span className={`px-2 py-1 rounded-full text-xs ${
+          item.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        }`}>
+          {item.isActive ? 'Active' : 'Inactive'}
+        </span>
+      </td>
       {role === "admin" && (
-        <td>
+        <td className="p-4">
           <FormContainer table="feeException" type="update" data={item} />
         </td>
       )}
     </tr>
   );
+  
 
   const { page } = searchParams;
   const p = page ? parseInt(page) : 1;
@@ -113,7 +112,7 @@ const FeeExceptionList: React.FC<FeeExceptionListProps> = ({
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
                 <Image src="/filter.png" alt="" width={14} height={14} />
               </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+              <button className="w-8 h-8 flex items-center justify-c  enter rounded-full bg-lamaYellow">
                 <Image src="/sort.png" alt="" width={14} height={14} />
               </button>
               {role === "admin" && (

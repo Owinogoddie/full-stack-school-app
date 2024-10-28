@@ -1,4 +1,3 @@
-// app/bulk-fee-payment/_components/BulkFeePaymentModal.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -23,7 +22,7 @@ const schema = z.object({
   termId: z.string().min(1, 'Term is required'),
   gradeId: z.coerce.number().optional(),
   classIds: z.array(z.coerce.number()).min(1, 'At least one class must be selected'),
-  feeIds: z.array(z.string()).min(1, 'At least one fee must be selected')
+  feeStructureIds: z.array(z.string()).min(1, 'At least one fee must be selected')
 });
 
 type FormData = z.infer<typeof schema>;
@@ -33,14 +32,19 @@ interface InitialData {
   terms: { id: string; name: string; academicYearId: number }[];
   grades: { id: number; name: string }[];
   classes: { id: number; name: string; gradeId: number }[];
-  fees: {
+  feeStructures: {
     id: string;
     name: string;
     description: string | null;
     amount: number;
-    academicYearId: number | null;
+    academicYearId: number;
     termId: string | null;
-    feeTypeId: string | null;
+    gradeId: number | null;
+    classId: number | null;
+    categories: {
+      id: string;
+      name: string;
+    }[];
   }[];
 }
 
@@ -55,7 +59,7 @@ export default function BulkFeePaymentModal({
 }: BulkFeePaymentModalProps) {
   const [filteredTerms, setFilteredTerms] = useState(initialData.terms);
   const [filteredClasses, setFilteredClasses] = useState(initialData.classes);
-  const [filteredFees, setFilteredFees] = useState(initialData.fees);
+  const [filteredFeeStructures, setFilteredFeeStructures] = useState(initialData.feeStructures);
 
   const {
     control,
@@ -67,7 +71,7 @@ export default function BulkFeePaymentModal({
     resolver: zodResolver(schema),
     defaultValues: {
       classIds: [],
-      feeIds: []
+      feeStructureIds: []
     }
   });
 
@@ -83,7 +87,7 @@ export default function BulkFeePaymentModal({
       );
       setFilteredTerms(terms);
       setValue('termId', ''); // Reset selected term
-      setValue('feeIds', []); // Reset selected fees
+      setValue('feeStructureIds', []); // Reset selected fee structures
     }
   }, [selectedAcademicYearId, initialData.terms, setValue]);
 
@@ -101,19 +105,19 @@ export default function BulkFeePaymentModal({
     }
   }, [selectedGradeId, initialData.classes, setValue]);
 
-  // Filter fees based on academic year and term
+  // Filter fee structures based on academic year and term
   useEffect(() => {
     if (selectedAcademicYearId && selectedTermId) {
-      const fees = initialData.fees.filter(
+      const feeStructures = initialData.feeStructures.filter(
         fee => 
           fee.academicYearId === selectedAcademicYearId && 
           fee.termId === selectedTermId
       );
-      setFilteredFees(fees);
+      setFilteredFeeStructures(feeStructures);
     } else {
-      setFilteredFees([]);
+      setFilteredFeeStructures([]);
     }
-  }, [selectedAcademicYearId, selectedTermId, initialData.fees]);
+  }, [selectedAcademicYearId, selectedTermId, initialData.feeStructures]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -249,23 +253,23 @@ export default function BulkFeePaymentModal({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fees
+            Fee Structures
           </label>
           <Controller
-            name="feeIds"
+            name="feeStructureIds"
             control={control}
             render={({ field }) => (
               <Select<MultiOptionType, true>
                 {...field}
                 isMulti
-                options={filteredFees.map(fee => ({
+                options={filteredFeeStructures.map(fee => ({
                   value: fee.id,
                   label: `${fee.name} (${fee.amount})`
                 }))}
                 onChange={(newValue: MultiValue<MultiOptionType>) => {
                   field.onChange(newValue.map(item => item.value));
                 }}
-                value={filteredFees
+                value={filteredFeeStructures
                   .filter(fee => field.value?.includes(fee.id))
                   .map(fee => ({
                     value: fee.id,
@@ -276,9 +280,9 @@ export default function BulkFeePaymentModal({
               />
             )}
           />
-          {errors.feeIds && (
+          {errors.feeStructureIds && (
             <p className="mt-1 text-sm text-red-600">
-              {errors.feeIds.message}
+              {errors.feeStructureIds.message}
             </p>
           )}
         </div>

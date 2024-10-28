@@ -4,29 +4,40 @@ import { AppError, handleError } from '@/lib/error-handler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { ExceptionStatus, ExceptionType, FeeTemplate, FeeType, Prisma, Student } from "@prisma/client";
+import {  Prisma, Student } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 import FeeExceptionList from './FeeExceptionList';
 
 export interface FeeExceptionListItem {
   id: string;
   student: Student;
-  feeType: FeeType;
-  feeTemplate: (FeeTemplate & {
-    feeType: FeeType;
-  }) | null;
-  status: ExceptionStatus;
-  exceptionType: ExceptionType;
-  amount: number | null;
-  percentage: number | null;
+  feeStructure: {
+    id: string;
+    // name: string;
+    feeType: {
+      id: string;
+      name: string;
+    };
+    term: {
+      id: string;
+      name: string;
+    } | null;
+    academicYear: {
+      id: number;
+      year: string;
+    };
+  };
+  feeStructureId: string;
+  amount: number;
+  reason: string;
   startDate: Date;
   endDate: Date | null;
-  description: string | null;
-  approvedBy: string | null;
-  reason: string | null;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+
 
 interface FetchFeeExceptionsResult {
   data: FeeExceptionListItem[];
@@ -50,25 +61,20 @@ async function fetchFeeExceptions(
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
         switch (key) {
-          case "feeTemplateId":
-            query.feeTemplateId = value;
-            break;
-          case "feeTypeId":
-            query.feeTypeId = value;
+          case "feeStructureId":
+            query.feeStructureId = value;
             break;
           case "studentId":
             query.studentId = value;
             break;
-          case "exceptionType":
-            query.exceptionType = value as ExceptionType;
-            break;
-          case "status":
-            query.status = value as ExceptionStatus;
+          case "isActive":
+            query.isActive = value === 'true';
             break;
           case "search":
             query.OR = [
               { student: { firstName: { contains: value, mode: "insensitive" } } },
               { student: { lastName: { contains: value, mode: "insensitive" } } },
+              { reason: { contains: value, mode: "insensitive" } },
             ];
             break;
           default:
@@ -99,19 +105,24 @@ async function fetchFeeExceptions(
       prisma.feeException.findMany({
         where: query,
         include: {
-          feeTemplate: {
+          feeStructure: {
             include: {
               feeType: true,
-            },
+              term: true,    
+              academicYear: true,
+            }
           },
-          feeType: true,
           student: true,
         },
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),
+        orderBy: {
+          createdAt: 'desc',
+        },
       }),
       prisma.feeException.count({ where: query }),
     ]);
+    
 
     return { data, count, role: role || 'user' };
   } catch (error) {

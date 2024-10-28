@@ -1,4 +1,3 @@
-// app/bulk-fee-payment/_components/BulkFeePaymentForm.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -6,8 +5,12 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import FullScreenLoader from "@/components/full-screen-loader";
 import SearchField from "@/components/search-field";
-import { getUnpaidFees } from "@/actions/fees/get-unpaid-fees";
-import { processBulkPayment } from "@/actions/fees/bulk-payment";
+
+import { format } from "date-fns";
+import { getUnpaidFeesByGradeOrClass } from "@/actions/fees/get-unpaid-fees";
+import { StudentFeeData } from "../types";
+import { processBulkPayments } from "@/actions/fees/bulk-payment";
+
 
 interface BulkFeePaymentFormProps {
   params: {
@@ -15,7 +18,7 @@ interface BulkFeePaymentFormProps {
     termId: string;
     gradeId?: number;
     classIds: number[];
-    feeIds: string[];
+    feeStructureIds: string[];
   };
   academicYear?: string;
   term?: string;
@@ -24,31 +27,15 @@ interface BulkFeePaymentFormProps {
   fees?: string[];
 }
 
-export interface UnpaidFeeStudent {
-  studentId: string;
-  admissionNumber: string;
-  firstName: string;
-  lastName: string;
-  fees: {
-    feeId: string;
-    name: string;
-    description: string | null;
-    amount: number;
-    paid: number;
-    balance: number;
-    exceptionInfo: string | null;
-  }[];
-  totalBalance: number;
-  creditBalance: number;
-}
-
-interface PaymentInput {
+export interface PaymentInput {
   studentId: string;
   amount: number;
-  feeIds: string[];
+  feestructureIds: string[];
   academicYearId: number;
   termId: string;
   useCreditBalance: boolean;
+  paymentType: 'BANK' | 'MOBILE_MONEY' | 'CASH' | 'CHEQUE' | 'OTHER';
+  referenceNumber: string;
 }
 
 export default function BulkFeePaymentForm({
@@ -61,26 +48,28 @@ export default function BulkFeePaymentForm({
 }: BulkFeePaymentFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [students, setStudents] = useState<UnpaidFeeStudent[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<UnpaidFeeStudent[]>([]);
+  const [students, setStudents] = useState<StudentFeeData[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<StudentFeeData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFees, setSelectedFees] = useState<Record<string, Set<string>>>({});
   const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState(false);
-  const [useCreditBalance, setUseCreditBalance] = useState<Record<string, boolean>>({});
+  const [useExcessFees, setUseExcessFees] = useState<Record<string, boolean>>({});
+  const [paymentTypes, setPaymentTypes] = useState<Record<string, string>>({});
+const [referenceNumbers, setReferenceNumbers] = useState<Record<string, string>>({});
 
-  const handleCreditBalanceToggle = (studentId: string) => {
-    setUseCreditBalance(prev => ({
+  const handleExcessFeesToggle = (studentId: string) => {
+    setUseExcessFees(prev => ({
       ...prev,
       [studentId]: !prev[studentId]
     }));
 
-    if (!useCreditBalance[studentId]) {
-      const student = students.find(s => s.studentId === studentId);
-      if (student && student.creditBalance > 0) {
+    if (!useExcessFees[studentId]) {
+      const student = students.find(s => s.student.id === studentId);
+      if (student && student.feeSummary.availableExcessFees > 0) {
         setPaymentAmounts(prev => ({
           ...prev,
-          [studentId]: student.creditBalance.toFixed(2)
+          [studentId]: student.feeSummary.availableExcessFees.toFixed(2)
         }));
       }
     }
@@ -89,11 +78,11 @@ export default function BulkFeePaymentForm({
   useEffect(() => {
     if (students.length > 0) {
       const filtered = students.filter(
-        (student) =>
-          student.admissionNumber
+        (data) =>
+          data.student.admissionNumber
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          `${student.firstName} ${student.lastName}`
+          `${data.student.firstName} ${data.student.lastName}`
             .toLowerCase()
             .includes(searchTerm.toLowerCase())
       );
@@ -104,23 +93,61 @@ export default function BulkFeePaymentForm({
   const fetchUnpaidFees = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getUnpaidFees({
+      const response = await getUnpaidFeesByGradeOrClass({
         academicYearId: params.academicYearId,
         termId: params.termId,
         classIds: params.classIds,
-        feeIds: params.feeIds
+        feeStructureIds: params.feeStructureIds
       });
-      setStudents(data);
-      setFilteredStudents(data);
+      const transformedData: StudentFeeData[] = response.map(item => ({
+        student: {
+          ...item.student,
+          class: item.student.class || "", // Convert undefined to empty string
+          id: item.student.id,
+          upi: item.student.upi,
+          admissionNumber: item.student.admissionNumber,
+          firstName: item.student.firstName,
+          lastName: item.student.lastName,
+          grade: item.student.grade,
+          gender: item.student.gender,
+          status: item.student.status,
+          categories: item.student.categories,
+          specialProgrammes: item.student.specialProgrammes
+        },
+        feeSummary: {
+          totalOriginalAmount: item.feeSummary.totalOriginalAmount,
+          totalApplicableAmount: item.feeSummary.totalApplicableAmount,
+          totalPaidAmount: item.feeSummary.totalPaidAmount,
+          totalRemainingAmount: item.feeSummary.totalRemainingAmount,
+          availableExcessFees: item.feeSummary.availableExcessFees,
+          finalRemainingAmount: item.feeSummary.finalRemainingAmount
+        },
+        unpaidFees: item.unpaidFees.map((fee:any) => ({
+          feeStructureId: fee.feeStructureId,
+          feeType: fee.feeType,
+          originalAmount: fee.originalAmount,
+          applicableAmount: fee.applicableAmount,
+          paidAmount: fee.paidAmount,
+          remainingAmount: fee.remainingAmount,
+          dueDate: fee.dueDate.toString(), // Convert Date to string
+          isOverdue: fee.isOverdue,
+          hasException: fee.hasException,
+          exception: fee.exception,
+          status: fee.status
+        }))
+      }));
+
+      setStudents(transformedData);
+      setFilteredStudents(transformedData);
 
       // Initialize selected fees
       const initialSelectedFees: Record<string, Set<string>> = {};
-      data.forEach((student:any) => {
-        initialSelectedFees[student.studentId] = new Set(
-          student.fees.map((fee:any) => fee.feeId)
+      transformedData.forEach((studentData) => {
+        initialSelectedFees[studentData.student.id] = new Set(
+          studentData.unpaidFees.map(fee => fee.feeStructureId)
         );
       });
-      setSelectedFees(initialSelectedFees);
+      setSelectedFees(initialSelectedFees)
     } catch (error) {
       toast.error("Failed to fetch unpaid fees");
       console.error(error);
@@ -133,67 +160,73 @@ export default function BulkFeePaymentForm({
     fetchUnpaidFees();
   }, [fetchUnpaidFees]);
 
-  const handleFeeToggle = (studentId: string, feeId: string) => {
+  const handleFeeToggle = (studentId: string, feeStructureId: string) => {
     setSelectedFees((prev) => {
       const studentFees = new Set(prev[studentId]);
-      if (studentFees.has(feeId)) {
-        studentFees.delete(feeId);
+      if (studentFees.has(feeStructureId)) {
+        studentFees.delete(feeStructureId);
         setPaymentAmounts((prev) => {
           const newAmounts = { ...prev };
           delete newAmounts[studentId];
           return newAmounts;
         });
       } else {
-        studentFees.add(feeId);
+        studentFees.add(feeStructureId);
       }
       return { ...prev, [studentId]: studentFees };
     });
   };
+
   const handleAmountChange = (studentId: string, value: string) => {
     if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
       setPaymentAmounts((prev) => ({ ...prev, [studentId]: value }));
     }
   };
 
-  const calculateTotalSelectedFees = (student: UnpaidFeeStudent) => {
-    const selectedTotal = student.fees
-      .filter((fee) => selectedFees[student.studentId]?.has(fee.feeId))
-      .reduce((sum, fee) => sum + fee.balance, 0);
+  const calculateTotalSelectedFees = (studentData: StudentFeeData) => {
+    const selectedTotal = studentData.unpaidFees
+      .filter((fee) => selectedFees[studentData.student.id]?.has(fee.feeStructureId))
+      .reduce((sum, fee) => sum + fee.remainingAmount, 0);
     
-    return useCreditBalance[student.studentId]
-      ? Math.max(selectedTotal - student.creditBalance, 0)
+    return useExcessFees[studentData.student.id]
+      ? Math.max(selectedTotal - studentData.feeSummary.availableExcessFees, 0)
       : selectedTotal;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (processing) return;
-
+  
     try {
       setProcessing(true);
-
+  
       const payments: PaymentInput[] = Object.entries(paymentAmounts)
-        .filter(([, amount]) => amount && parseFloat(amount) > 0)
-        .map(([studentId, amount]) => ({
-          studentId,
-          amount: parseFloat(amount),
-          feeIds: Array.from(selectedFees[studentId] || []),
-          academicYearId: params.academicYearId,
-          termId: params.termId,
-          useCreditBalance: useCreditBalance[studentId] || false,
-        }));
-
+      .filter(([, amount]) => amount && parseFloat(amount) > 0)
+      .map(([studentId, amount]) => ({
+        studentId,
+        amount: parseFloat(amount),
+        feestructureIds: Array.from(selectedFees[studentId] || []),
+        academicYearId: params.academicYearId,
+        termId: params.termId,
+        useCreditBalance: useExcessFees[studentId] || false,
+        paymentType: paymentTypes[studentId] as 'BANK' | 'MOBILE_MONEY' | 'CASH' | 'CHEQUE' | 'OTHER',
+        referenceNumber: referenceNumbers[studentId] || ''
+      }));
+  
       if (payments.length === 0) {
         toast.error("No valid payments to process");
         return;
       }
-
-      const results = await processBulkPayment(payments);
-      
-      // Handle results array
-      const successCount = results.filter((r:any) => r.success).length;
+  
+      const results = await processBulkPayments(payments);
+      const successCount = results.filter(r => r.success).length;
+  
       if (successCount === payments.length) {
         toast.success("All payments processed successfully");
+        // Reset form
+        setPaymentAmounts({});
+        setUseExcessFees({});
+        setSelectedFees({});
         router.refresh();
         await fetchUnpaidFees();
       } else if (successCount > 0) {
@@ -209,7 +242,6 @@ export default function BulkFeePaymentForm({
       setProcessing(false);
     }
   };
-
   if (loading) {
     return <FullScreenLoader />;
   }
@@ -285,48 +317,62 @@ export default function BulkFeePaymentForm({
                     Student Details
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fees
+                    Unpaid Fees
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total Selected
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Credit Balance
+                    Excess Fees
                   </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+  Payment Type
+</th>
+<th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+  Reference
+</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Payment Amount
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredStudents.map((student) => (
-                  <tr key={student.studentId}>
+                {filteredStudents.map((studentData) => (
+                  <tr key={studentData.student.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
                         <div className="text-sm font-medium text-gray-900">
-                          {student.firstName} {student.lastName}
+                          {studentData.student.firstName} {studentData.student.lastName}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {student.admissionNumber}
+                          {studentData.student.admissionNumber}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {studentData.student.grade} - {studentData.student.class}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-2">
-                        {student.fees.map((fee) => (
-                          <div key={fee.feeId}>
+                        {studentData.unpaidFees.map((fee) => (
+                          <div key={fee.feeStructureId}>
                             <label className="flex items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={selectedFees[student.studentId]?.has(fee.feeId)}
-                                onChange={() => handleFeeToggle(student.studentId, fee.feeId)}
+                                checked={selectedFees[studentData.student.id]?.has(fee.feeStructureId)}
+                                onChange={() => handleFeeToggle(studentData.student.id, fee.feeStructureId)}
                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                               />
                               <span className="text-sm">
-                                {fee.name} (Balance: {fee.balance.toFixed(2)})
-                                {fee.exceptionInfo && (
+                                {fee.feeType} (Balance: {fee.remainingAmount.toFixed(2)})
+                                {fee.hasException && (
                                   <span className="text-green-600 ml-2">
-                                    {fee.exceptionInfo}
+                                    {fee.exception?.reason}
+                                  </span>
+                                )}
+                                {fee.isOverdue && (
+                                  <span className="text-red-600 ml-2">
+                                    Overdue: {format(new Date(fee.dueDate), 'dd/MM/yyyy')}
                                   </span>
                                 )}
                               </span>
@@ -337,28 +383,60 @@ export default function BulkFeePaymentForm({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {calculateTotalSelectedFees(student).toFixed(2)}
+                        {calculateTotalSelectedFees(studentData).toFixed(2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
-                          checked={useCreditBalance[student.studentId] || false}
-                          onChange={() => handleCreditBalanceToggle(student.studentId)}
+                          checked={useExcessFees[studentData.student.id] || false}
+                          onChange={() => handleExcessFeesToggle(studentData.student.id)}
+                          disabled={studentData.feeSummary.availableExcessFees === 0}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-900">
-                          {student.creditBalance.toFixed(2)}
+                          {studentData.feeSummary.availableExcessFees.toFixed(2)}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+  <select
+    value={paymentTypes[studentData.student.id] || ''}
+    onChange={(e) => setPaymentTypes(prev => ({
+      ...prev,
+      [studentData.student.id]: e.target.value
+    }))}
+    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+              focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  >
+    <option value="">Select Type</option>
+    <option value="BANK">Bank</option>
+    <option value="MOBILE_MONEY">Mobile Money</option>
+    <option value="CASH">Cash</option>
+    <option value="CHECK">Check</option>
+    <option value="OTHER">Other</option>
+  </select>
+</td>
+<td className="px-6 py-4 whitespace-nowrap">
+  <input
+    type="text"
+    value={referenceNumbers[studentData.student.id] || ''}
+    onChange={(e) => setReferenceNumbers(prev => ({
+      ...prev,
+      [studentData.student.id]: e.target.value
+    }))}
+    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+              focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+    placeholder="Enter reference"
+  />
+</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="text"
-                        value={paymentAmounts[student.studentId] || ""}
-                        onChange={(e) => handleAmountChange(student.studentId, e.target.value)}
-                        disabled={useCreditBalance[student.studentId]}
+                        value={paymentAmounts[studentData.student.id] || ""}
+                        onChange={(e) => handleAmountChange(studentData.student.id, e.target.value)}
+                        disabled={useExcessFees[studentData.student.id]}
                         className="w-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm
                                  focus:ring-blue-500 focus:border-blue-500 sm:text-sm
                                  disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -372,10 +450,121 @@ export default function BulkFeePaymentForm({
           </div>
         </div>
 
-        {/* Mobile view cards */}
-        <div className="md:hidden space-y-4">
-          {/* Mobile cards implementation as before */}
+
+       {/* Mobile view cards */}
+<div className="md:hidden space-y-4">
+  {filteredStudents.map((studentData) => (
+    <div key={studentData.student.id} className="bg-white rounded-lg shadow-md p-4">
+      {/* Student Header */}
+      <div className="border-b pb-3 mb-3">
+        <h3 className="text-lg font-medium text-gray-900">
+          {studentData.student.firstName} {studentData.student.lastName}
+        </h3>
+        <div className="text-sm text-gray-500">
+          <p>Admission: {studentData.student.admissionNumber}</p>
+          <p>{studentData.student.grade} - {studentData.student.class}</p>
         </div>
+      </div>
+
+      {/* Unpaid Fees Section */}
+      <div className="space-y-3 mb-4">
+        <h4 className="font-medium text-gray-700">Unpaid Fees</h4>
+        {studentData.unpaidFees.map((fee) => (
+          <div key={fee.feeStructureId} className="flex items-start space-x-2 bg-gray-50 p-2 rounded">
+            <input
+              type="checkbox"
+              checked={selectedFees[studentData.student.id]?.has(fee.feeStructureId)}
+              onChange={() => handleFeeToggle(studentData.student.id, fee.feeStructureId)}
+              className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <div className="flex-1">
+              <p className="text-sm font-medium">{fee.feeType}</p>
+              <p className="text-sm text-gray-600">Balance: {fee.remainingAmount.toFixed(2)}</p>
+              {fee.hasException && (
+                <p className="text-sm text-green-600">{fee.exception?.reason}</p>
+              )}
+              {fee.isOverdue && (
+                <p className="text-sm text-red-600">
+                  Overdue: {format(new Date(fee.dueDate), 'dd/MM/yyyy')}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Total and Payment Section */}
+      <div className="space-y-3 bg-gray-50 p-3 rounded">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium">Total Selected:</span>
+          <span className="text-sm">{calculateTotalSelectedFees(studentData).toFixed(2)}</span>
+        </div>
+
+        <div className="flex justify-between items-center">
+          <label className="flex items-center space-x-2 text-sm">
+            <input
+              type="checkbox"
+              checked={useExcessFees[studentData.student.id] || false}
+              onChange={() => handleExcessFeesToggle(studentData.student.id)}
+              disabled={studentData.feeSummary.availableExcessFees === 0}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>Use Excess Fees ({studentData.feeSummary.availableExcessFees.toFixed(2)})</span>
+          </label>
+        </div>
+        <div className="space-y-3">
+  <div className="flex flex-col space-y-2">
+    <label className="text-sm font-medium">Payment Type</label>
+    <select
+      value={paymentTypes[studentData.student.id] || ''}
+      onChange={(e) => setPaymentTypes(prev => ({
+        ...prev,
+        [studentData.student.id]: e.target.value
+      }))}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                focus:ring-blue-500 focus:border-blue-500 text-sm"
+    >
+      <option value="">Select Type</option>
+      <option value="BANK">Bank</option>
+      <option value="MOBILE_MONEY">Mobile Money</option>
+      <option value="CASH">Cash</option>
+      <option value="CHECK">Check</option>
+      <option value="OTHER">Other</option>
+    </select>
+  </div>
+
+  <div className="flex flex-col space-y-2">
+    <label className="text-sm font-medium">Reference Number</label>
+    <input
+      type="text"
+      value={referenceNumbers[studentData.student.id] || ''}
+      onChange={(e) => setReferenceNumbers(prev => ({
+        ...prev,
+        [studentData.student.id]: e.target.value
+      }))}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                focus:ring-blue-500 focus:border-blue-500 text-sm"
+      placeholder="Enter reference"
+    />
+  </div>
+</div>
+        <div className="flex items-center space-x-2">
+          <span className="text-sm font-medium">Payment Amount:</span>
+          <input
+            type="text"
+            value={paymentAmounts[studentData.student.id] || ""}
+            onChange={(e) => handleAmountChange(studentData.student.id, e.target.value)}
+            disabled={useExcessFees[studentData.student.id]}
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                     focus:ring-blue-500 focus:border-blue-500 text-sm
+                     disabled:bg-gray-100 disabled:cursor-not-allowed"
+            placeholder="Enter amount"
+          />
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
 
         <div className="flex justify-end space-x-4 mt-6">
           <button

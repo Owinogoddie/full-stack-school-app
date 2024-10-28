@@ -28,19 +28,20 @@ const menuItems = [
     description: 'Manage different fee categories'
   },
   { 
-    name: 'Fee Templates', 
-    icon: ClipboardDocumentListIcon, 
-    href: '/fees/templates',
+    name: 'Assign Fees ', 
+    icon: BanknotesIcon, 
+    href: '/fees/fee-structure',
     color: 'bg-green-50 text-green-600',
-    description: 'Configure fee structures'
+    description: 'Assign fees to clases, grades, etc'
   },
   { 
-    name: 'Student Fees', 
-    icon: ClipboardDocumentListIcon, 
-    href: '/fees/fees',
-    color: 'bg-indigo-50 text-indigo-600',
-    description: 'Students Fees'
+    name: 'Add Payments', 
+    icon: CreditCardIcon, 
+    href: '/fees/bulk-fee-payment',
+    color: 'bg-pink-50 text-pink-600',
+    description: 'Record new fee payments'
   },
+
   { 
     name: 'Fee Structures', 
     icon: ClipboardDocumentListIcon, 
@@ -56,26 +57,27 @@ const menuItems = [
     description: 'Manage fee waivers and discounts'
   },
   { 
-    name: 'Transactions', 
-    icon: BanknotesIcon, 
-    href: '/fees/transactions',
+    name: 'Student Fees Summary', 
+    icon: ClipboardDocumentListIcon, 
+    href: '/fees/payment-summary',
     color: 'bg-indigo-50 text-indigo-600',
-    description: 'View all fee transactions'
+    description: 'Students Fees'
   },
-  { 
-    name: 'Add Payments', 
-    icon: CreditCardIcon, 
-    href: '/fees/bulk-fee-payment',
-    color: 'bg-pink-50 text-pink-600',
-    description: 'Record new fee payments'
-  },
-  { 
-    name: 'Students Fee Summary', 
-    icon: UsersIcon, 
-    href: '/fees/student-fee-summary',
-    color: 'bg-orange-50 text-orange-600',
-    description: 'Individual student fee status'
-  },
+  // { 
+  //   name: 'Transactions', 
+  //   icon: BanknotesIcon, 
+  //   href: '/fees/transactions',
+  //   color: 'bg-indigo-50 text-indigo-600',
+  //   description: 'View all fee transactions'
+  // },
+ 
+  // { 
+  //   name: 'Students Fee Summary', 
+  //   icon: UsersIcon, 
+  //   href: '/fees/student-fee-summary',
+  //   color: 'bg-orange-50 text-orange-600',
+  //   description: 'Individual student fee status'
+  // },
   { 
     name: 'Reports', 
     icon: ChartBarIcon, 

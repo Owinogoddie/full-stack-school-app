@@ -26,12 +26,8 @@ import { deleteGradeScale } from "@/actions/grade-scale-actions";
 import { deleteExamSchedule } from "@/actions/exam-schedule";
 import { deleteStudentCategory } from "@/actions/student-category-actions";
 import { deleteTerm } from "@/actions/term-actions";
-// import { deleteFeeException } from "@/actions/fees/fee-exception-actions";
-import { deleteFeeTransaction } from "@/actions/fee-transaction-actions";
 import { deleteSpecialProgramme } from "@/actions/special-programme-actions";
 import { deleteFeeType } from "@/actions/fees/fee-types";
-import { deleteFeeTemplate } from "@/actions/fees/fee-template-actions";
-import { deleteFee } from "@/actions/fees/fee-actions";
 type ResponseState = {
   success: boolean;
   error: boolean;
@@ -63,11 +59,9 @@ const deleteActionMap: Record<string, DeleteAction> = {
   studentCategory:deleteStudentCategory,
   feeType:deleteFeeType,
   term:deleteTerm,
-  feeTemplate:deleteFeeTemplate,
   // feeException:deleteFeeException,
-  feeTransaction:deleteFeeTransaction,
+  // feeTransaction:deleteFeeTransaction,
   specialProgramme:deleteSpecialProgramme,
-  fee:deleteFee
 
 };
 
@@ -136,7 +130,7 @@ const TermForm = dynamic(() => import("./forms/term-form"), {
 const SpecialProgrammeForm = dynamic(() => import("./forms/special-programme-form"), {
   loading: () => <h1>Loading...</h1>,
 });
-const FeeTemplateForm = dynamic(() => import("./forms/fee-template-form"), {
+const FeeStructureForm = dynamic(() => import("./forms/fee-structure-form"), {
   loading: () => <h1>Loading...</h1>,
 });
 const FeeTypeForm = dynamic(() => import("./forms/fee-type-form"), {
@@ -145,15 +139,13 @@ const FeeTypeForm = dynamic(() => import("./forms/fee-type-form"), {
 const FeeExceptionForm = dynamic(() => import("./forms/fee-exception-form"), {
   loading: () => <h1>Loading...</h1>,
 });
-const FeeTransactionForm = dynamic(() => import("./forms/fee-exception-form"), {
-  loading: () => <h1>Loading...</h1>,
-});
+// const FeeTransactionForm = dynamic(() => import("./forms/fee-exception-form"), {
+//   loading: () => <h1>Loading...</h1>,
+// });
 const StudedntCategoryForm = dynamic(() => import("./forms/student-category-form"), {
   loading: () => <h1>Loading...</h1>,
 });
-const FeeForm = dynamic(() => import("./forms/fee-form"), {
-  loading: () => <h1>Loading...</h1>,
-});
+
 
 const forms: {
   [key: string]: (
@@ -319,14 +311,14 @@ const forms: {
       setOpen={setOpen}
     />),
     
-  feeTransaction: (setOpen, type, data) => (
-    <FeeTransactionForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-    />),
-    feeTemplate: (setOpen, type, data,relatedData) => (
-    <FeeTemplateForm
+  // feeTransaction: (setOpen, type, data) => (
+  //   <FeeTransactionForm
+  //     type={type}
+  //     data={data}
+  //     setOpen={setOpen}
+  //   />),
+    feeStructure: (setOpen, type, data,relatedData) => (
+    <FeeStructureForm
       type={type}
       data={data}
       setOpen={setOpen}
@@ -341,14 +333,7 @@ const forms: {
       relatedData={relatedData}
     />
   ),
-    fee: (setOpen, type, data,relatedData) => (
-    <FeeForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
-  ),
+  
 };
 
 const FormModal = ({

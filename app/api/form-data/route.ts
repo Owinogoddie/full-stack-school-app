@@ -261,7 +261,7 @@ export async function GET(request: Request) {
         // console.log({relatedData})
 
         break;
-      case "feeTemplate":
+      case "feeStructure":
         const feeTemplateGrades = await prisma.grade.findMany({
           select: { id: true, levelName: true },
         });
@@ -281,8 +281,18 @@ export async function GET(request: Request) {
           select: { id: true, name: true },
         });
         const feeTemplateProgrammes = await prisma.specialProgramme.findMany({
-          select: { id: true, name: true,grades:true,classes:true },
+          select: { 
+            id: true, 
+            name: true,
+            grades: {
+              select: { id: true, levelName: true }
+            },
+            classes: {
+              select: { id: true, name: true }
+            }
+          },
         });
+      
         relatedData = {
           grades: feeTemplateGrades,
           classes: feeTemplateClasses,
@@ -294,63 +304,69 @@ export async function GET(request: Request) {
         };
         break;
       case "fee":
-        const feeTemplateGradess = await prisma.grade.findMany({
-          select: { id: true, levelName: true },
-        });
-        const feeTemplateClassess = await prisma.class.findMany({
-          select: { id: true, name: true, gradeId: true },
-        });
-        const feeTemplateAcademicYearss = await prisma.academicYear.findMany({
-          select: { id: true, year: true },
-        });
-        const feeTemplateTermss = await prisma.term.findMany({
-          select: { id: true, name: true, academicYearId: true }, 
-        });
-        // const feeTemplateTypess = await prisma.feeType.findMany({
-        //   select: { id: true, name: true, amount: true },
+        // const feeTemplateGradess = await prisma.grade.findMany({
+        //   select: { id: true, levelName: true },
         // });
-        const feeTemplateCategoriess = await prisma.studentCategory.findMany({
-          select: { id: true, name: true },
-        });
-        const feeTemplateProgrammess = await prisma.specialProgramme.findMany({
-          select: { id: true, name: true,grades:true,classes:true },
-        });
-        const feetemplates = await prisma.feeTemplate.findMany({
-          select: {
-            id: true,
-            feeType: {
-              select: { name: true },
-            },
-            academicYear: {
-              select: { year: true },
-            },
-            term: {
-              select: { name: true },
-            },
-            baseAmount:true,
-          },
-        });
-        const formatedfeetemplates = feetemplates.map((template) => ({
-          id: template.id,
-          name: `${template.feeType.name} - ${template.academicYear.year} - ${template.term.name}`,
-          baseAmount:template.baseAmount
-        }));
-        relatedData = {
-          grades: feeTemplateGradess,
-          classes: feeTemplateClassess,
-          academicYears: feeTemplateAcademicYearss,
-          terms: feeTemplateTermss,
-          // feeTypes: feeTemplateTypess,
-          studentCategories: feeTemplateCategoriess,
-          specialProgrammes:feeTemplateProgrammess,
-          feeTemplates:formatedfeetemplates
-        };
+        // const feeTemplateClassess = await prisma.class.findMany({
+        //   select: { id: true, name: true, gradeId: true },
+        // });
+        // const feeTemplateAcademicYearss = await prisma.academicYear.findMany({
+        //   select: { id: true, year: true },
+        // });
+        // const feeTemplateTermss = await prisma.term.findMany({
+        //   select: { id: true, name: true, academicYearId: true }, 
+        // });
+        // // const feeTemplateTypess = await prisma.feeType.findMany({
+        // //   select: { id: true, name: true, amount: true },
+        // // });
+        // const feeTemplateCategoriess = await prisma.studentCategory.findMany({
+        //   select: { id: true, name: true },
+        // });
+        // const feeTemplateProgrammess = await prisma.specialProgramme.findMany({
+        //   select: { id: true, name: true,grades:true,classes:true },
+        // });
+        // const feetemplates = await prisma.feeTemplate.findMany({
+        //   select: {
+        //     id: true,
+        //     feeType: {
+        //       select: { name: true },
+        //     },
+        //     academicYear: {
+        //       select: { year: true },
+        //     },
+        //     term: {
+        //       select: { name: true },
+        //     },
+        //     baseAmount:true,
+        //   },
+        // });
+        // const formatedfeetemplates = feetemplates.map((template) => ({
+        //   id: template.id,
+        //   name: `${template.feeType.name} - ${template.academicYear.year} - ${template.term.name}`,
+        //   baseAmount:template.baseAmount
+        // }));
+        // relatedData = {
+        //   grades: feeTemplateGradess,
+        //   classes: feeTemplateClassess,
+        //   academicYears: feeTemplateAcademicYearss,
+        //   terms: feeTemplateTermss,
+        //   // feeTypes: feeTemplateTypess,
+        //   studentCategories: feeTemplateCategoriess,
+        //   specialProgrammes:feeTemplateProgrammess,
+        //   feeTemplates:formatedfeetemplates
+        // };
         break;
       case "feeException":
         const feeExceptionStudents = await prisma.student.findMany({
           select: { id: true, firstName: true, lastName: true },
         });
-        const feeExceptionTemplates = await prisma.feeTemplate.findMany({
+        const feeExceptionAcademicYears = await prisma.academicYear.findMany({
+          select: { id: true, year: true },
+        });
+        const feeExceptionTerms = await prisma.term.findMany({
+          select: { id: true, name: true, academicYearId: true }, 
+        });
+        const feeExceptionFeesStructures = await prisma.feeStructure.findMany({
           select: {
             id: true,
             feeType: {
@@ -364,25 +380,16 @@ export async function GET(request: Request) {
             },
           },
         });
-        const formattedFeeTemplates = feeExceptionTemplates.map((template) => ({
+        const formattedFeeTemplates = feeExceptionFeesStructures.map((template) => ({
           id: template.id,
-          name: `${template.feeType.name} - ${template.academicYear.year} - ${template.term.name}`,
+          name: `${template.feeType.name} - ${template.academicYear.year} - ${template.term?.name || ""}`,
         }));
-        const feeExceptionAcademicYears = await prisma.academicYear.findMany({
-          select: { id: true, year: true },
-        });
-        const feeExceptionTerms = await prisma.term.findMany({
-          select: { id: true, name: true, academicYearId: true },
-        });
-        const feeExceptionTypes = await prisma.feeType.findMany({
-          select: { id: true, name: true },
-        });
+       
         relatedData = {
           students: feeExceptionStudents,
-          feeTemplates: formattedFeeTemplates,
-          academicYears: feeExceptionAcademicYears,
-          terms: feeExceptionTerms,
-          feeTypes:feeExceptionTypes
+          feeStructures: formattedFeeTemplates,
+          academicYears:feeExceptionAcademicYears,
+          terms:feeExceptionTerms
         };
         break;
       case "term":

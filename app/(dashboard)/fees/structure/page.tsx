@@ -10,7 +10,7 @@ import {
   getGrades,
   getClasses,
   getSpecialProgrammes
-} from "@/actions/fee/fee-structure";
+} from "@/actions/fees/data-fetching";
 
 async function fetchInitialData() {
   try {

@@ -35,7 +35,7 @@ async function fetchFeeTypes(searchParams: { [key: string]: string | undefined }
 
   // Add additional filters
   if (queryParams) {
-    for (const [key, value] of Object.entries(queryParams)) {
+    Object.entries(queryParams).forEach(([key, value]) => {
       if (value !== undefined) {
         switch (key) {
           case "name":
@@ -44,11 +44,9 @@ async function fetchFeeTypes(searchParams: { [key: string]: string | undefined }
           case "amount":
             query.amount = { equals: parseFloat(value) };
             break;
-          default:
-            break;
         }
       }
-    }
+    });
   }
 
   try {
@@ -57,13 +55,7 @@ async function fetchFeeTypes(searchParams: { [key: string]: string | undefined }
         where: query,
         include: {
           school: true,
-          feeTemplates: {
-            include: {
-              academicYear: true,
-              term: true,
-              exceptions: true,
-            }
-          }
+          feeStructures: true
         },
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),

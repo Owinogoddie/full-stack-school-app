@@ -1,177 +1,170 @@
 // app/fee-structures/_components/FeeStructureFilter.tsx
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import SelectField from "@/components/select-field";
+import Select from 'react-select';
+import { useState, useEffect } from 'react';
 
-const schema = z.object({
-  academicYearId: z.coerce.number().positive("Academic Year is required"),
-  termId: z.string().optional(),
-  gradeId: z.coerce.number().optional(),
-  classId: z.coerce.number().optional(),
-  studentCategoryId: z.string().optional(),
-  specialProgrammeId: z.string().optional(),
-});
-
-type FormData = z.infer<typeof schema>;
-
-interface FeeStructureFilterProps {
+interface FilterProps {
   initialData: {
     academicYears: { id: number; year: string }[];
     terms: { id: string; name: string }[];
     grades: { id: number; levelName: string }[];
     classes: { id: number; name: string; gradeId: number }[];
     studentCategories: { id: string; name: string }[];
-    specialProgrammes: {
-      id: string;
-      name: string;
-      description: string | null;
-    }[]; // Add this line
+    specialProgrammes: { id: string; name: string; description: string | null }[];
   };
-  onFilter: (data: FormData) => void;
+  onFilter: (filters: any) => void;
 }
 
-export default function FeeStructureFilter({
-  initialData,
-  onFilter,
-}: FeeStructureFilterProps) {
+export default function FeeStructureFilter({ initialData, onFilter }: FilterProps) {
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<any>(null);
+  const [selectedTerm, setSelectedTerm] = useState<any>(null);
+  const [selectedGrade, setSelectedGrade] = useState<any>(null);
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
+  const [selectedProgram, setSelectedProgram] = useState<any>(null);
   const [filteredClasses, setFilteredClasses] = useState(initialData.classes);
-  const [filteredTerms, setFilteredTerms] = useState(initialData.terms);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  });
-
-  const selectedGradeId = watch("gradeId");
-  const selectedAcademicYearId = watch("academicYearId");
-  // console.log(initialData)
   useEffect(() => {
-    if (selectedGradeId) {
-      const classes = initialData.classes.filter(
-        (cls) => cls.gradeId === Number(selectedGradeId) // Convert to number for comparison
+    if (selectedGrade) {
+      setFilteredClasses(
+        initialData.classes.filter(c => c.gradeId === selectedGrade.value)
       );
-      setFilteredClasses(classes);
-      setValue("classId", undefined); // Reset selected class
     } else {
       setFilteredClasses(initialData.classes);
     }
-  }, [selectedGradeId, initialData.classes, setValue]);
+  }, [selectedGrade, initialData.classes]);
 
-  useEffect(() => {
-    if (selectedAcademicYearId) {
-      // In a real application, you would fetch terms based on the academic year
-      // For now, we'll just use all terms
-      setFilteredTerms(initialData.terms);
-    }
-  }, [selectedAcademicYearId, initialData.terms, setValue]);
+  const handleFilter = () => {
+    const filters = {
+      academicYearId: selectedAcademicYear?.value,
+      termId: selectedTerm?.value,
+      gradeIds: selectedGrade ? [selectedGrade.value] : undefined,
+      classIds: selectedClass ? [selectedClass.value] : undefined,
+      studentCategoryIds: selectedCategory ? [selectedCategory.value] : undefined,
+      specialProgrammeIds: selectedProgram ? [selectedProgram.value] : undefined,
+    };
+    onFilter(filters);
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <h2 className="text-lg font-semibold mb-6">Filter Fee Structure</h2>
-      <form onSubmit={handleSubmit(onFilter)} className="space-y-6">
-        <SelectField
-          label="Academic Year"
-          name="academicYearId"
-          register={register}
-          setValue={setValue}
-          error={errors.academicYearId}
-          options={initialData.academicYears.map((year) => ({
-            value: year.id.toString(),
-            label: year.year,
-          }))}
-        />
+    <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">Filters</h2>
 
-        <SelectField
-          label="Term (Optional)"
-          name="termId"
-          register={register}
-          error={errors.termId}
-          setValue={setValue}
-          options={[
-            { value: "", label: "All Terms" },
-            ...filteredTerms.map((term) => ({
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Academic Year
+          </label>
+          <Select
+            value={selectedAcademicYear}
+            onChange={(option) => setSelectedAcademicYear(option)}
+            options={initialData.academicYears.map(year => ({
+              value: year.id,
+              label: year.year
+            }))}
+            isClearable
+            className="basic-select"
+            classNamePrefix="select"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Term
+          </label>
+          <Select
+            value={selectedTerm}
+            onChange={(option) => setSelectedTerm(option)}
+            options={initialData.terms.map(term => ({
               value: term.id,
-              label: term.name,
-            })),
-          ]}
-        />
+              label: term.name
+            }))}
+            isClearable
+            className="basic-select"
+            classNamePrefix="select"
+          />
+        </div>
 
-        <SelectField
-          label="Grade (Optional)"
-          name="gradeId"
-          register={register}
-          error={errors.gradeId}
-          setValue={setValue}
-          options={[
-            { value: "", label: "All Grades" },
-            ...initialData.grades.map((grade) => ({
-              value: grade.id.toString(),
-              label: grade.levelName,
-            })),
-          ]}
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Grade
+          </label>
+          <Select
+            value={selectedGrade}
+            onChange={(option) => {
+              setSelectedGrade(option);
+              setSelectedClass(null);
+            }}
+            options={initialData.grades.map(grade => ({
+              value: grade.id,
+              label: grade.levelName
+            }))}
+            isClearable
+            className="basic-select"
+            classNamePrefix="select"
+          />
+        </div>
 
-        <SelectField
-          label="Class (Optional)"
-          name="classId"
-          register={register}
-          setValue={setValue}
-          error={errors.classId}
-          options={[
-            { value: "", label: "All Classes" },
-            ...filteredClasses.map((cls) => ({
-              value: cls.id.toString(),
-              label: cls.name,
-            })),
-          ]}
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Class
+          </label>
+          <Select
+            value={selectedClass}
+            onChange={(option) => setSelectedClass(option)}
+            options={filteredClasses.map(cls => ({
+              value: cls.id,
+              label: cls.name
+            }))}
+            isClearable
+            isDisabled={!selectedGrade}
+            className="basic-select"
+            classNamePrefix="select"
+          />
+        </div>
 
-        <SelectField
-          label="Student Category (Optional)"
-          name="studentCategoryId"
-          register={register}
-          error={errors.studentCategoryId}
-          setValue={setValue}
-          options={[
-            { value: "", label: "All Categories" },
-            ...initialData.studentCategories.map((category) => ({
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Student Category
+          </label>
+          <Select
+            value={selectedCategory}
+            onChange={(option) => setSelectedCategory(option)}
+            options={initialData.studentCategories.map(category => ({
               value: category.id,
-              label: category.name,
-            })),
-          ]}
-        />
-        <SelectField
-          label="Special Programme (Optional)"
-          name="specialProgrammeId"
-          register={register}
-          setValue={setValue}
-          error={errors.specialProgrammeId}
-          options={[
-            { value: "", label: "All Programmes" },
-            ...initialData.specialProgrammes.map((programme) => ({
-              value: programme.id,
-              label: programme.name,
-            })),
-          ]}
-        />
+              label: category.name
+            }))}
+            isClearable
+            className="basic-select"
+            classNamePrefix="select"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Special Programme
+          </label>
+          <Select
+            value={selectedProgram}
+            onChange={(option) => setSelectedProgram(option)}
+            options={initialData.specialProgrammes.map(program => ({
+              value: program.id,
+              label: program.name
+            }))}
+            isClearable
+            className="basic-select"
+            classNamePrefix="select"
+          />
+        </div>
+
         <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md
-                   transition duration-150 ease-in-out focus:outline-none focus:ring-2
-                   focus:ring-blue-500 focus:ring-offset-2"
+          onClick={handleFilter}
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200"
         >
-          View Fee Structure
+          Apply Filters
         </button>
-      </form>
+      </div>
     </div>
   );
 }

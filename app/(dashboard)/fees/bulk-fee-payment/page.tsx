@@ -9,17 +9,17 @@ import {
   getTerms,
   getGrades,
   getClasses,
-  getFees,
-} from "@/actions/fee/data-fetching";
+  getFeeStructures,
+} from "@/actions/fees/data-fetching";
 
 async function fetchInitialData() {
   try {
-    const [academicYears, terms, grades, classes, fees] = await Promise.all([
+    const [academicYears, terms, grades, classes, feeStructures] = await Promise.all([
       getAcademicYears(),
       getTerms(),
       getGrades(),
       getClasses(),
-      getFees(),
+      getFeeStructures(),
     ]);
 
     return {
@@ -38,14 +38,19 @@ async function fetchInitialData() {
         name: cls.name,
         gradeId: cls.gradeId,
       })),
-      fees: fees.map(fee => ({
-        id: fee.id,
-        name: fee.name,
-        description: fee.description,
-        amount: fee.amount,
-        academicYearId: fee.academicYearId,
-        termId: fee.termId,
-        feeTypeId: fee.feeTypeId
+      feeStructures: feeStructures.map(structure => ({
+        id: structure.id,
+        name: structure.feeType.name,
+        description: structure.feeType.description,
+        amount: structure.amount,
+        academicYearId: structure.academicYearId,
+        termId: structure.termId,
+        gradeId: structure.grades[0]?.id,
+        classId: structure.classes[0]?.id,
+        categories: structure.categories.map(cat => ({
+          id: cat.id,
+          name: cat.name
+        }))
       }))
     };
   } catch (error) {

@@ -1,4 +1,3 @@
-// app/fee-types/FeeTypeList.tsx
 'use client';
 
 import React from 'react';
@@ -6,20 +5,14 @@ import FormContainer from "@/components/form-container";
 import Pagination from "@/components/pagination";
 import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
-import { FeeType, School, FeeTemplate, FeeException, AcademicYear, Term } from "@prisma/client";
+import { FeeType, School, FeeStructure } from "@prisma/client";
 import Image from "next/image";
 import ClientOnlyComponent from "@/components/client-only-component";
 import { useSession } from "@clerk/nextjs";
 
-type ExtendedFeeTemplate = FeeTemplate & {
-  academicYear: AcademicYear;
-  term: Term;
-  exceptions: FeeException[];
-};
-
 type FeeTypeWithRelations = FeeType & {
   school: School | null;
-  feeTemplates: ExtendedFeeTemplate[];
+  feeStructures: FeeStructure[];
 };
 
 interface FeeTypeListProps {
@@ -53,8 +46,8 @@ const FeeTypeList: React.FC<FeeTypeListProps> = ({ data, count, searchParams }) 
       className: "hidden md:table-cell",
     },
     {
-      header: "Active Templates",
-      accessor: "activeTemplates",
+      header: "Fee Structures",
+      accessor: "feeStructures",
       className: "hidden md:table-cell",
     },
     ...(role === "admin" || role === "school_admin"
@@ -67,10 +60,6 @@ const FeeTypeList: React.FC<FeeTypeListProps> = ({ data, count, searchParams }) 
       : []),
   ];
 
-  const getActiveTemplatesCount = (templates: ExtendedFeeTemplate[]) => {
-    return templates.filter(template => template.isActive).length;
-  };
-
   const renderRow = (item: FeeTypeWithRelations) => (
     <tr
       key={item.id}
@@ -80,7 +69,7 @@ const FeeTypeList: React.FC<FeeTypeListProps> = ({ data, count, searchParams }) 
       <td className="hidden md:table-cell p-4">{item.description}</td>
       <td className="p-4">{item.amount ? item.amount : '-'}</td>
       <td className="hidden md:table-cell p-4">{item.school?.name || '-'}</td>
-      <td className="hidden md:table-cell p-4">{getActiveTemplatesCount(item.feeTemplates)}</td>
+      <td className="hidden md:table-cell p-4">{item.feeStructures.length}</td>
       {(role === "admin" || (role === "school_admin" && item.schoolId === schoolId)) && (
         <td className="p-4">
           <ClientOnlyComponent>
@@ -90,8 +79,8 @@ const FeeTypeList: React.FC<FeeTypeListProps> = ({ data, count, searchParams }) 
                 table="feeType" 
                 type="delete" 
                 id={item.id} 
-                // disabled={item.feeTemplates.length > 0}
-                // tooltip={item.feeTemplates.length > 0 ? "Cannot delete fee type with active templates" : undefined}
+                // disabled={item.feeStructures.length > 0}
+                // tooltip={item.feeStructures.length > 0 ? "Cannot delete fee type with active structures" : undefined}
               />
             </div>
           </ClientOnlyComponent>

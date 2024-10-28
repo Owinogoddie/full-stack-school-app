@@ -5,14 +5,14 @@ import FormContainer from "@/components/form-container";
 import Pagination from "@/components/pagination";
 import Table from "@/components/table";
 import TableSearch from "@/components/table-search";
-import { StudentCategory, Student, FeeTemplate } from "@prisma/client";
+import { StudentCategory, Student, FeeStructure } from "@prisma/client";
 import Image from "next/image";
 import ClientOnlyComponent from "@/components/client-only-component";
 import { useSession } from "@clerk/nextjs";
 
 type StudentCategoryListType = StudentCategory & { 
   students: Student[],
-  feeTemplates: FeeTemplate[]
+  feeStructures: FeeStructure[]
 };
 
 interface StudentCategoryListProps {
@@ -63,7 +63,7 @@ const StudentCategoryList: React.FC<StudentCategoryListProps> = ({ data, count, 
       <td className="p-4">{item.name}</td>
       <td className="hidden md:table-cell p-4">{item.description}</td>
       <td className="hidden md:table-cell p-4">{item.students?.length || 0}</td>
-      <td className="hidden md:table-cell p-4">{item.feeTemplates?.length || 0}</td>
+      <td className="hidden md:table-cell p-4">{item.feeStructures?.length || 0}</td>
       {role === "admin" && (
         <td className="p-4">
           <ClientOnlyComponent>

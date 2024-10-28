@@ -18,10 +18,10 @@ interface InitialData {
 interface FilterParams {
   academicYearId: number;
   termId?: string;
-  gradeId?: number;
-  classId?: number;
-  studentCategoryId?: string;
-  specialProgrammeId?: string;
+  gradeIds?: number[];  
+  classIds?: number[];  
+  studentCategoryIds?: string[]; 
+  specialProgrammeIds?: string[];
 }
 
 export default function FeeStructureClient({

@@ -1,0 +1,53 @@
+/* components/Calendar.css */
+.rdp {
+    margin: 1em;
+  }
+  
+  .rdp-month {
+    background-color: white;
+    padding: 1em;
+    border-radius: 0.5em;
+  }
+  
+  .rdp-cell {
+    padding: 0.5em;
+  }
+  
+  .rdp-head_cell {
+    font-weight: 600;
+    color: #4b5563;
+  }
+  
+  .rdp-day {
+    width: 2.5em;
+    height: 2.5em;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  
+  .rdp-day_selected {
+    background-color: #2563eb;
+    color: white;
+  }
+  
+  .rdp-day_selected:hover {
+    background-color: #1d4ed8;
+  }
+  
+  .rdp-day_today {
+    font-weight: bold;
+  }
+  
+  .rdp-day:hover {
+    background-color: #e5e7eb;
+  }
+  
+  .rdp-day_range_start,
+  .rdp-day_range_end {
+    background-color: #2563eb;
+    color: white;
+  }
+  
+  .rdp-day_range_middle {
+    background-color: #dbeafe;
+  }

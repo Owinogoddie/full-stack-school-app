@@ -1,4 +1,3 @@
-// components/select-field.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { ChevronUpDownIcon, CheckIcon, MagnifyingGlassIcon } from "@heroicons/react/24/solid";
@@ -16,7 +15,7 @@ interface SelectFieldProps {
 
 const SelectField: React.FC<SelectFieldProps> = ({
   label,
-  options,
+  options = [],
   name,
   register,
   setValue,
@@ -47,10 +46,13 @@ const SelectField: React.FC<SelectFieldProps> = ({
     setIsOpen(false);
   };
 
-  const selectedLabel = options.find(option => option.value === selectedOption)?.label || "Select an option";
+  // Add null check for options
+  const validOptions = options?.filter(option => option && option.label && option.value) || [];
 
-  const filteredOptions = options.filter((option) =>
-    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  const selectedLabel = validOptions.find(option => option.value === selectedOption)?.label || "Select an option";
+
+  const filteredOptions = validOptions.filter((option) =>
+    option.label?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -87,24 +89,28 @@ const SelectField: React.FC<SelectFieldProps> = ({
                 />
               </div>
             </div>
-            {filteredOptions.map((option) => (
-              <div
-                key={option.value}
-                className={`${
-                  option.value === selectedOption ? 'bg-blue-100 text-blue-900' : 'text-gray-900'
-                } cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50`}
-                onClick={() => handleSelect(option.value)}
-              >
-                <span className={`block truncate ${option.value === selectedOption ? 'font-semibold' : 'font-normal'}`}>
-                  {option.label}
-                </span>
-                {option.value === selectedOption && (
-                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
-                    <CheckIcon className="h-5 w-5" aria-hidden="true" />
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <div
+                  key={option.value}
+                  className={`${
+                    option.value === selectedOption ? 'bg-blue-100 text-blue-900' : 'text-gray-900'
+                  } cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50`}
+                  onClick={() => handleSelect(option.value)}
+                >
+                  <span className={`block truncate ${option.value === selectedOption ? 'font-semibold' : 'font-normal'}`}>
+                    {option.label}
                   </span>
-                )}
-              </div>
-            ))}
+                  {option.value === selectedOption && (
+                    <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                      <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-gray-500">No options found</div>
+            )}
           </div>
         )}
       </div>
@@ -115,7 +121,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
         onChange={(e) => handleSelect(e.target.value)}
       >
         <option value="">Select an option</option>
-        {options.map((option) => (
+        {validOptions.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>

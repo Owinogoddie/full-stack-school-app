@@ -43,7 +43,7 @@ async function fetchStudentCategories(searchParams: { [key: string]: string | un
         where: query,
         include: {
           students: true,
-          feeTemplates: true,
+          feeStructures: true,
         },
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),
