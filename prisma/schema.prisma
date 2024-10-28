@@ -3,12 +3,15 @@ generator client {
 }
 
 // dd
+// datasource db {
+//   provider  = "postgresql"
+//   url       = env("DATABASE_URL")
+//   directUrl = env("DIRECT_URL")
+// }
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  url  	    = env("DATABASE_URL")
 }
-
 model School {
   id            String         @id @default(uuid())
   name          String
