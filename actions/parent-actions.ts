@@ -22,9 +22,8 @@ export const createParent = async (data: ParentSchema): Promise<ResponseState> =
     };
   }
   try {
-    const username = `${data.firstName}${data.lastName}`.toLowerCase();
     user = await clerkClient.users.createUser({
-      username,
+      username:data.userName,
       password: data.password,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -37,6 +36,7 @@ export const createParent = async (data: ParentSchema): Promise<ResponseState> =
         nationalId: data.nationalId,
         firstName: data.firstName,
         lastName: data.lastName,
+        userName:data.userName,
         email: data.email,
         phone: data.phone,
         address: data.address,
@@ -101,6 +101,7 @@ export const updateParent = async (data: ParentSchema): Promise<ResponseState> =
         nationalId: data.nationalId,
         firstName: data.firstName,
         lastName: data.lastName,
+        userName:data.userName,
         email: data.email,
         phone: data.phone,
         address: data.address,

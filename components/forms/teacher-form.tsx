@@ -150,6 +150,15 @@ useEffect(() => {
           placeholder="Enter Email e.g xxx@ccc.com"
           fullWidth
         />
+        <InputField
+          label="user Name"
+          name="userName"
+          defaultValue={data?.userName}
+          register={register}
+          error={errors?.userName}
+          placeholder="Enter user Name"
+          fullWidth
+        />
         {type === "create" && (
           <>
             <InputField

@@ -6,6 +6,7 @@ export const parentSchema = z.object({
   nationalId: z.string().optional(),
   firstName: z.string().min(1, "First name is required!"),
   lastName: z.string().min(1, "Last name is required!"),
+  userName: z.string().min(1, { message: "User name is required for auth!" }),
   email: z.string().email("Invalid email address!").optional(),
   phone: z.string().min(10, "Phone number must be at least 10 digits!"),
   address: z.string().optional(),

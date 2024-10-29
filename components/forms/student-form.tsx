@@ -135,13 +135,14 @@ const StudentForm = ({
       <div>
         <span className="text-xs text-gray-400 font-medium">Authentication Information</span>
         <div className="flex flex-wrap gap-4 mt-2">
+          
           <InputField
-            label="UPI"
-            name="upi"
-            defaultValue={data?.upi}
+            label="User Name"
+            name="userName"
+            defaultValue={data?.userName}
             register={register}
-            error={errors?.upi}
-            placeholder="Enter UPI"
+            error={errors?.userName}
+            placeholder="Enter user Name"
           />
           {type === "create" && (
             <>
@@ -175,6 +176,14 @@ const StudentForm = ({
       <div>
         <span className="text-xs text-gray-400 font-medium">Personal Information</span>
         <div className="flex flex-wrap gap-4 mt-2">
+        <InputField
+            label="UPI"
+            name="upi"
+            defaultValue={data?.upi}
+            register={register}
+            error={errors?.upi}
+            placeholder="Enter UPI"
+          />
           <InputField
             label="First Name"
             name="firstName"

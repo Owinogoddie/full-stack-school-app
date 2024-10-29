@@ -9,9 +9,10 @@ generator client {
 //   directUrl = env("DIRECT_URL")
 // }
 datasource db {
-  provider  = "postgresql"
-  url  	    = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
 model School {
   id            String         @id @default(uuid())
   name          String
@@ -157,6 +158,7 @@ model Parent {
   nationalId String?   @unique
   firstName  String
   lastName   String
+  userName   String
   email      String?   @unique
   phone      String    @unique
   address    String?
@@ -173,6 +175,7 @@ model Student {
   img                   String?
   firstName             String
   lastName              String
+  userName              String
   dateOfBirth           DateTime
   gender                Gender
   address               String
@@ -231,6 +234,7 @@ model Teacher {
   tscNumber           String               @unique
   firstName           String
   lastName            String
+  userName            String
   dateOfBirth         DateTime
   gender              Gender
   nationalId          String               @unique
@@ -265,6 +269,7 @@ model Admin {
   id        String   @id @default(uuid())
   firstName String
   lastName  String
+  username  String
   email     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -390,46 +395,46 @@ model FeeStructure {
 }
 
 model FeeException {
-  id             String        @id @default(uuid())
-  student        Student       @relation(fields: [studentId], references: [id])
+  id             String       @id @default(uuid())
+  student        Student      @relation(fields: [studentId], references: [id])
   studentId      String
-  feeStructure   FeeStructure  @relation(fields: [feeStructureId], references: [id])
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id])
   feeStructureId String
   amount         Float
   reason         String
   startDate      DateTime
   endDate        DateTime?
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@unique([studentId, feeStructureId])
 }
 
 model Payment {
-  id             String       @id @default(uuid())
-  student        Student      @relation(fields: [studentId], references: [id])
-  studentId      String
-  feeStatus      FeeStatus    @relation(fields: [feeStatusId], references: [id])
-  feeStatusId    String
-  amount         Float
-  paymentDate    DateTime     @default(now())
-  dueDate        DateTime
-  term           Term         @relation(fields: [termId], references: [id])
-  termId         String
-  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
-  academicYearId Int
-  description    String?
-  paymentType    String // "CASH", "BANK", "MOBILE_MONEY","CHEQUE","OTHER"
-  status         String // "PENDING", "COMPLETED", "FAILED"
-  reference      String?
-  hasExcessFee         Boolean  @default(false)
-  excessAmount         Float    @default(0)
-  generatedExcessFeeId String?  @unique// Reference to the ExcessFee record
-  generatedExcessFee   ExcessFee? @relation("GeneratedFromPayment", fields: [generatedExcessFeeId], references: [id])
+  id                   String       @id @default(uuid())
+  student              Student      @relation(fields: [studentId], references: [id])
+  studentId            String
+  feeStatus            FeeStatus    @relation(fields: [feeStatusId], references: [id])
+  feeStatusId          String
+  amount               Float
+  paymentDate          DateTime     @default(now())
+  dueDate              DateTime
+  term                 Term         @relation(fields: [termId], references: [id])
+  termId               String
+  academicYear         AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYearId       Int
+  description          String?
+  paymentType          String // "CASH", "BANK", "MOBILE_MONEY","CHEQUE","OTHER"
+  status               String // "PENDING", "COMPLETED", "FAILED"
+  reference            String?
+  hasExcessFee         Boolean      @default(false)
+  excessAmount         Float        @default(0)
+  generatedExcessFeeId String?      @unique // Reference to the ExcessFee record
+  generatedExcessFee   ExcessFee?   @relation("GeneratedFromPayment", fields: [generatedExcessFeeId], references: [id])
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model FeeStatus {
@@ -457,19 +462,19 @@ model FeeStatus {
 }
 
 model ExcessFee {
-  id             String       @id @default(uuid())
-  student        Student      @relation(fields: [studentId], references: [id])
-  studentId      String
-  amount         Float
-  term           Term         @relation(fields: [termId], references: [id])
-  termId         String
-  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
-  academicYearId Int
-  description    String?
-  isUsed         Boolean      @default(false)
-  generatingPayment    Payment? @relation("GeneratedFromPayment")
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                String       @id @default(uuid())
+  student           Student      @relation(fields: [studentId], references: [id])
+  studentId         String
+  amount            Float
+  term              Term         @relation(fields: [termId], references: [id])
+  termId            String
+  academicYear      AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYearId    Int
+  description       String?
+  isUsed            Boolean      @default(false)
+  generatingPayment Payment?     @relation("GeneratedFromPayment")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 }
 
 model Book {

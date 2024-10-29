@@ -23,11 +23,11 @@ export const createTeacher = async (
     };
   }
   try {
-    const email = formData.email || ""; // Ensure email is not undefined
-    const username = email.split("@")[0]; // Take the part before the '@'
+    // const email = formData.email || ""; // Ensure email is not undefined
+    // const username = email.split("@")[0]; // Take the part before the '@'
     // Create user in Clerk
     user = await clerkClient.users.createUser({
-      username,
+      username:formData.userName,
       password: formData.password,
       firstName: formData.firstName,
       lastName: formData.lastName,
@@ -38,6 +38,7 @@ export const createTeacher = async (
     await prisma.teacher.create({
       data: {
         id: user.id,
+        userName:formData.userName,
         tscNumber: formData.tscNumber,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -140,6 +141,7 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
         tscNumber: formData.tscNumber,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        userName:formData.userName,
         dateOfBirth: new Date(formData.dateOfBirth),
         gender: formData.gender,
         nationalId: formData.nationalId,

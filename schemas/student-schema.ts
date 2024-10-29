@@ -4,6 +4,7 @@ export const studentSchema = z.object({
   upi: z.string(),
   admissionNumber: z.string().optional(),
   firstName: z.string().min(1, { message: "First name is required!" }),
+  userName: z.string().min(1, { message: "User name is required for auth!" }),
   lastName: z.string().min(1, { message: "Last name is required!" }),
   password: z
     .string()

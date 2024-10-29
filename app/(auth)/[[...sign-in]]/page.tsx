@@ -5,20 +5,56 @@ import * as SignIn from "@clerk/elements/sign-in";
 import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
+// Loader Component
+const Loader = () => {
+  return (
+    <div className="h-screen flex items-center justify-center bg-lamaSkyLight">
+      <div className="flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    </div>
+  );
+};
 
 const LoginPage = () => {
-  const { user } = useUser();
-
+  const { user, isLoaded } = useUser();
   const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    const role = user?.publicMetadata.role;
+    if (!isLoaded) return;
 
-    if (role) {
-      router.push(`/${role}`);
+    const handleRedirect = async () => {
+      const role = user?.publicMetadata?.role;
+      
+      console.log('Debug:', {
+        user: user?.id,
+        role,
+        metadata: user?.publicMetadata
+      });
+
+      if (role) {
+        setIsRedirecting(true);
+        try {
+          await router.push(`/${role}`);
+        } catch (error) {
+          console.error('Redirect error:', error);
+          setIsRedirecting(false);
+        }
+      }
+    };
+
+    if (user) {
+      handleRedirect();
     }
-  }, [user, router]);
+  }, [user, router, isLoaded]);
+
+  if (!isLoaded || isRedirecting) {
+    return <Loader />;
+  }
 
   return (
     <div className="h-screen flex items-center justify-center bg-lamaSkyLight">
@@ -57,7 +93,7 @@ const LoginPage = () => {
           </Clerk.Field>
           <SignIn.Action
             submit
-            className="bg-blue-500 text-white my-1 rounded-md text-sm p-[10px]"
+            className="bg-blue-500 text-white my-1 rounded-md text-sm p-[10px] hover:bg-blue-600 transition-colors"
           >
             Sign In
           </SignIn.Action>

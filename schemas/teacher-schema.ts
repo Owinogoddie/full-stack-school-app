@@ -5,6 +5,7 @@ export const teacherSchema = z.object({
   tscNumber: z.string().min(1, { message: "TSC number is required!" }),
   firstName: z.string().min(1, { message: "First name is required!" }),
   lastName: z.string().min(1, { message: "Last name is required!" }),
+  userName: z.string().min(1, { message: "User name is required for auth!" }),
   password: z
     .string()
     .min(8, { message: "Password must be at least 8 characters long!" })

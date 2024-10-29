@@ -29,9 +29,9 @@ export const createStudent = async (
     const admissionNumber = await generateAdmissionNumber();
     const currentAcademicYear = await getCurrentAcademicYear();
     // Create user in Clerk
-    const username = `${data.firstName}${data.lastName}`.toLowerCase();
+    // const username = `${data.firstName}${data.lastName}`.toLowerCase();
     user = await clerkClient.users.createUser({
-      username,
+      username:data.userName,
       password: data.password,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -46,6 +46,7 @@ export const createStudent = async (
           upi: data.upi,
           admissionNumber,
           firstName: data.firstName,
+          userName:data.userName,
           lastName: data.lastName,
           dateOfBirth: new Date(data.dateOfBirth),
           gender: data.gender,
@@ -144,6 +145,7 @@ export const updateStudent = async (
           admissionNumber: data.admissionNumber,
           firstName: data.firstName,
           lastName: data.lastName,
+          userName:data.userName,
           dateOfBirth: new Date(data.dateOfBirth),
           gender: data.gender,
           address: data.address,
@@ -195,6 +197,7 @@ export const updateStudent = async (
             admissionNumber: data.admissionNumber,
             firstName: data.firstName,
             lastName: data.lastName,
+            userName:data.userName,
             dateOfBirth: new Date(data.dateOfBirth),
             gender: data.gender,
             address: data.address,

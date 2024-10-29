@@ -110,6 +110,14 @@ const ParentForm = ({
             placeholder="Enter Last Name"
           />
           <InputField
+            label="User Name"
+            name="userName"
+            defaultValue={data?.userName}
+            register={register}
+            error={errors.userName}
+            placeholder="Enter User Name"
+          />
+          <InputField
             label="National ID"
             name="nationalId"
             defaultValue={data?.nationalId}
