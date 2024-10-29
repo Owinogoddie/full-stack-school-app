@@ -9,6 +9,7 @@ import InputField from "../input-field";
 import { ParentSchema } from "@/schemas/parent-schema";
 import { createParent, updateParent } from "@/actions/parent-actions";
 import Image from "next/image";
+import Switch from "../switch";
 
 type ResponseState = {
   success: boolean;
@@ -37,7 +38,11 @@ const ParentForm = ({
     defaultValues: data,
   });
 
-  const [state, setState] = useState<ResponseState>({ success: false, error: false });
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [state, setState] = useState<ResponseState>({
+    success: false,
+    error: false,
+  });
   const [img, setImg] = useState<any>(data?.img);
   const router = useRouter();
   const password = watch("password");
@@ -75,7 +80,9 @@ const ParentForm = ({
 
   useEffect(() => {
     if (state.success) {
-      toast.success(`Parent has been ${type === "create" ? "created" : "updated"}!`);
+      toast.success(
+        `Parent has been ${type === "create" ? "created" : "updated"}!`
+      );
       setOpen(false);
       router.refresh();
     } else if (state.error) {
@@ -91,7 +98,9 @@ const ParentForm = ({
 
       {/* Parent Information */}
       <div>
-        <span className="text-xs text-gray-400 font-medium">Parent Information</span>
+        <span className="text-xs text-gray-400 font-medium">
+          Parent Information
+        </span>
         <div className="flex flex-wrap gap-4 mt-2">
           <InputField
             label="First Name"
@@ -141,7 +150,7 @@ const ParentForm = ({
             error={errors.phone}
             placeholder="Enter Phone Number"
           />
-          
+
           <InputField
             label="Address"
             name="address"
@@ -149,9 +158,10 @@ const ParentForm = ({
             register={register}
             error={errors.address}
             placeholder="Enter Address"
+            fullWidth
           />
-          {type === "create" && (
-            <>
+          {type === "create" ? (
+            <div className="flex flex-wrap gap-4">
               <InputField
                 label="Password"
                 name="password"
@@ -173,41 +183,76 @@ const ParentForm = ({
                   {errors.repeatPassword.message}
                 </p>
               )}
-            </>
-          )}
-         
-      <div className="flex flex-col gap-2 w-full md:w-1/2">
-        <label className="text-xs text-gray-500">Photo</label>
-        <CldUploadWidget
-          uploadPreset="ex-academy"
-          onSuccess={(result, { widget }) => {
-            setImg(result.info);
-            widget.close();
-          }}
-        >
-          {({ open }) => (
-            <div
-              className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
-              onClick={() => open()}
-            >
-              <Image src="/upload.png" alt="" width={28} height={28} />
-              <span>Upload a photo</span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Switch
+                label="Change Password"
+                checked={showPasswordFields}
+                onChange={setShowPasswordFields}
+              />
+
+              {showPasswordFields && (
+                <div className="flex flex-wrap gap-4">
+                  <InputField
+                    label="New Password"
+                    name="password"
+                    type="password"
+                    register={register}
+                    error={errors.password}
+                    placeholder="Enter new password"
+                    fullWidth
+                  />
+                  <InputField
+                    label="Confirm New Password"
+                    name="repeatPassword"
+                    type="password"
+                    register={register}
+                    error={errors.repeatPassword}
+                    placeholder="Confirm new password"
+                    fullWidth
+                  />
+                  {errors.repeatPassword && (
+                    <p className="text-red-500 text-xs">
+                      {errors.repeatPassword.message}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
-        </CldUploadWidget>
-        {img && (
-          <Image
-            src={img.secure_url || img}
-            alt="Parent photo"
-            width={50}
-            height={50}
-            className="mt-2 rounded-md"
-          />
-        )}
-      </div>
+
+          <div className="flex flex-col gap-2 w-full md:w-1/2">
+            <label className="text-xs text-gray-500">Photo</label>
+            <CldUploadWidget
+              uploadPreset="ex-academy"
+              onSuccess={(result, { widget }) => {
+                setImg(result.info);
+                widget.close();
+              }}
+            >
+              {({ open }) => (
+                <div
+                  className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
+                  onClick={() => open()}
+                >
+                  <Image src="/upload.png" alt="" width={28} height={28} />
+                  <span>Upload a photo</span>
+                </div>
+              )}
+            </CldUploadWidget>
+            {img && (
+              <Image
+                src={img.secure_url || img}
+                alt="Parent photo"
+                width={50}
+                height={50}
+                className="mt-2 rounded-md"
+              />
+            )}
+          </div>
         </div>
       </div>
-
 
       <button
         type="submit"
@@ -223,8 +268,10 @@ const ParentForm = ({
               <div className="w-5 h-5 border-t-2 border-white border-solid rounded-full animate-spin"></div>
             </div>
           </>
+        ) : type === "create" ? (
+          "Create"
         ) : (
-          type === "create" ? "Create" : "Update"
+          "Update"
         )}
       </button>
     </form>

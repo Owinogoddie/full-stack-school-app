@@ -17,7 +17,7 @@ type ResponseState = {
 export const createStudent = async (
   data: StudentSchema
 ): Promise<ResponseState> => {
-  let user:any;
+  let user: any;
   if (!data.password) {
     return {
       success: false,
@@ -31,7 +31,7 @@ export const createStudent = async (
     // Create user in Clerk
     // const username = `${data.firstName}${data.lastName}`.toLowerCase();
     user = await clerkClient.users.createUser({
-      username:data.userName,
+      username: data.userName,
       password: data.password,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -46,7 +46,7 @@ export const createStudent = async (
           upi: data.upi,
           admissionNumber,
           firstName: data.firstName,
-          userName:data.userName,
+          userName: data.userName,
           lastName: data.lastName,
           dateOfBirth: new Date(data.dateOfBirth),
           gender: data.gender,
@@ -61,7 +61,7 @@ export const createStudent = async (
           img: data.img || null,
           currentAcademicYearId: currentAcademicYear.id,
           studentCategories: {
-            connect: data.studentCategories?.map(id => ({ id })) || [],
+            connect: data.studentCategories?.map((id) => ({ id })) || [],
           },
         },
       });
@@ -79,13 +79,49 @@ export const createStudent = async (
       });
     });
 
-    return { success: true, error: false, message: "Student created successfully with enrollment." };
+    return {
+      success: true,
+      error: false,
+      message: "Student created successfully with enrollment.",
+    };
   } catch (err: any) {
     console.error("Error in createStudent: ", err);
 
     // Rollback Clerk user creation if Prisma fails
     if (user) {
-      await clerkClient.users.deleteUser(user.id);
+      try {
+        await clerkClient.users.deleteUser(user.id);
+      } catch (rollbackErr) {
+        console.error("Error during rollback:", rollbackErr);
+      }
+    }
+    // Handle Clerk-specific errors
+    if (err.clerkError) {
+      if (err.errors?.[0]?.code === "form_password_pwned") {
+        return {
+          success: false,
+          error: true,
+          message:
+            "Password has been found in an online data breach. Please use a different password.",
+        };
+      }
+
+      if (err.errors?.[0]?.code === "form_identifier_exists") {
+        return {
+          success: false,
+          error: true,
+          message: "Username is already taken. Please choose another username.",
+        };
+      }
+
+      if (err.errors && err.errors.length > 0) {
+        return {
+          success: false,
+          error: true,
+          message: err.errors[0].message,
+          messages: err.errors.map((e: any) => e.message),
+        };
+      }
     }
 
     // If Prisma or Clerk error has `errors`, return all error messages
@@ -97,29 +133,39 @@ export const createStudent = async (
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         const targetField = err.meta?.target;
-        return { success: false, error: true, message: `The ${targetField} is already in use. Please try another.` };
+        return {
+          success: false,
+          error: true,
+          message: `The ${targetField} is already in use. Please try another.`,
+        };
       }
     }
 
-    return { success: false, error: true, message: err.message || "An error occurred during creation." };
+    return {
+      success: false,
+      error: true,
+      message: err.message || "An error occurred during creation.",
+    };
   }
 };
 
-export const updateStudent = async (
-  data: any
-): Promise<ResponseState> => {
-  console.log(data)
+export const updateStudent = async (data: any): Promise<ResponseState> => {
+  console.log(data);
   if (!data.id) {
-    return { success: false, error: true, message: "Student ID is required for update." };
+    return {
+      success: false,
+      error: true,
+      message: "Student ID is required for update.",
+    };
   }
-  
-  let originalStudent:any;
+
+  let originalStudent: any;
   try {
     // Fetch original student data for potential rollback
     originalStudent = await prisma.student.findUnique({
       where: { id: data.id },
-      include: { 
-        enrollments: { orderBy: { createdAt: 'desc' }, take: 1 },
+      include: {
+        enrollments: { orderBy: { createdAt: "desc" }, take: 1 },
         studentCategories: true,
       },
     });
@@ -128,13 +174,17 @@ export const updateStudent = async (
       return { success: false, error: true, message: "Student not found." };
     }
 
-   
-    // Update user in Clerk
-    await clerkClient.users.updateUser(data.id, {
-      username:data.userName,
+    const clerkUpdateData: any = {
+      username: data.userName,
       firstName: data.firstName,
       lastName: data.lastName,
-    });
+    };
+
+    if (data.password) {
+      clerkUpdateData.password = data.password;
+    }
+
+    await clerkClient.users.updateUser(data.id, clerkUpdateData);
 
     // Update student and create new enrollment if academic year changed
     await prisma.$transaction(async (prisma) => {
@@ -145,7 +195,7 @@ export const updateStudent = async (
           admissionNumber: data.admissionNumber,
           firstName: data.firstName,
           lastName: data.lastName,
-          userName:data.userName,
+          userName: data.userName,
           dateOfBirth: new Date(data.dateOfBirth),
           gender: data.gender,
           address: data.address,
@@ -183,10 +233,45 @@ export const updateStudent = async (
       // }
     });
 
-    return { success: true, error: false, message: "Student updated successfully." };
+    return {
+      success: true,
+      error: false,
+      message: "Student updated successfully.",
+    };
   } catch (err: any) {
     console.error("Error in updateStudent: ", err);
-    
+    // Handle Clerk-specific errors
+    if (err.clerkError) {
+      // Check if it's a password breach error
+      if (err.errors?.[0]?.code === "form_password_pwned") {
+        return {
+          success: false,
+          error: true,
+          message:
+            "Password has been found in an online data breach. Please use a different password.",
+        };
+      }
+
+      // Handle username exists error
+      if (err.errors?.[0]?.code === "form_identifier_exists") {
+        return {
+          success: false,
+          error: true,
+          message: "Username is already taken. Please choose another username.",
+        };
+      }
+
+      // Handle any other Clerk errors by returning their specific messages
+      if (err.errors && err.errors.length > 0) {
+        return {
+          success: false,
+          error: true,
+          message: err.errors[0].message,
+          messages: err.errors.map((e: any) => e.message),
+        };
+      }
+    }
+
     // Rollback Prisma changes
     if (originalStudent) {
       try {
@@ -197,7 +282,7 @@ export const updateStudent = async (
             admissionNumber: data.admissionNumber,
             firstName: data.firstName,
             lastName: data.lastName,
-            userName:data.userName,
+            userName: data.userName,
             dateOfBirth: new Date(data.dateOfBirth),
             gender: data.gender,
             address: data.address,
@@ -213,7 +298,7 @@ export const updateStudent = async (
         });
         // Rollback Clerk changes
         await clerkClient.users.updateUser(data.id, {
-          username:originalStudent.userName,
+          username: originalStudent.userName,
           firstName: originalStudent.firstName,
           lastName: originalStudent.lastName,
         });
@@ -231,11 +316,19 @@ export const updateStudent = async (
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         const targetField = err.meta?.target;
-        return { success: false, error: true, message: `The ${targetField} is already in use. Please try another.` };
+        return {
+          success: false,
+          error: true,
+          message: `The ${targetField} is already in use. Please try another.`,
+        };
       }
     }
 
-    return { success: false, error: true, message: err.message || "An error occurred during update." };
+    return {
+      success: false,
+      error: true,
+      message: err.message || "An error occurred during update.",
+    };
   }
 };
 
@@ -245,7 +338,11 @@ export const deleteStudent = async (
 ): Promise<ResponseState> => {
   const id = formData.get("id") as string;
   if (!id) {
-    return { success: false, error: true, message: "Student ID is required for deletion." };
+    return {
+      success: false,
+      error: true,
+      message: "Student ID is required for deletion.",
+    };
   }
   try {
     await clerkClient.users.deleteUser(id);
@@ -262,7 +359,11 @@ export const deleteStudent = async (
       });
     });
 
-    return { success: true, error: false, message: "Student and associated enrollments deleted successfully." };
+    return {
+      success: true,
+      error: false,
+      message: "Student and associated enrollments deleted successfully.",
+    };
   } catch (err: any) {
     console.error("Error in deleteStudent: ", err);
 
@@ -278,6 +379,10 @@ export const deleteStudent = async (
       }
     }
 
-    return { success: false, error: true, message: err.message || "An error occurred during deletion." };
+    return {
+      success: false,
+      error: true,
+      message: err.message || "An error occurred during deletion.",
+    };
   }
 };

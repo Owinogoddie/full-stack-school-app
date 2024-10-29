@@ -23,7 +23,7 @@ export const createParent = async (data: ParentSchema): Promise<ResponseState> =
   }
   try {
     user = await clerkClient.users.createUser({
-      username:data.userName,
+      username: data.userName,
       password: data.password,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -36,7 +36,7 @@ export const createParent = async (data: ParentSchema): Promise<ResponseState> =
         nationalId: data.nationalId,
         firstName: data.firstName,
         lastName: data.lastName,
-        userName:data.userName,
+        userName: data.userName,
         email: data.email,
         phone: data.phone,
         address: data.address,
@@ -50,23 +50,58 @@ export const createParent = async (data: ParentSchema): Promise<ResponseState> =
 
     // Rollback Clerk user creation if Prisma fails
     if (user) {
-      await clerkClient.users.deleteUser(user.id);
-    }
-
-    // If Prisma or Clerk error has `errors`, return all error messages
-    if (err.errors) {
-      const errorMessages = err.errors.map((e: any) => e.message);
-      return { success: false, error: true, messages: errorMessages };
-    }
-
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      if (err.code === "P2002") {
-        const targetField = err.meta?.target;
-        return { success: false, error: true, message: `The ${targetField} is already in use. Please try another.` };
+      try {
+        await clerkClient.users.deleteUser(user.id);
+      } catch (rollbackErr) {
+        console.error("Error during rollback:", rollbackErr);
       }
     }
 
-    return { success: false, error: true, message: err.message || "An error occurred during creation." };
+    // Handle Clerk-specific errors
+    if (err.clerkError) {
+      if (err.errors?.[0]?.code === 'form_password_pwned') {
+        return {
+          success: false,
+          error: true,
+          message: "Password has been found in an online data breach. Please use a different password."
+        };
+      }
+
+      if (err.errors?.[0]?.code === 'form_identifier_exists') {
+        return {
+          success: false,
+          error: true,
+          message: "Username is already taken. Please choose another username."
+        };
+      }
+
+      if (err.errors && err.errors.length > 0) {
+        return {
+          success: false,
+          error: true,
+          message: err.errors[0].message,
+          messages: err.errors.map((e: any) => e.message)
+        };
+      }
+    }
+
+    // Handle Prisma errors
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === "P2002") {
+        const targetField = err.meta?.target;
+        return {
+          success: false,
+          error: true,
+          message: `The ${targetField} is already in use. Please try another.`
+        };
+      }
+    }
+
+    return {
+      success: false,
+      error: true,
+      message: err.message || "An error occurred during creation."
+    };
   }
 };
 
@@ -86,21 +121,25 @@ export const updateParent = async (data: ParentSchema): Promise<ResponseState> =
       return { success: false, error: true, message: "Parent not found." };
     }
 
-    // Update user in Clerk
-    await clerkClient.users.updateUser(data.id, {
-      username:data.userName,
+    const clerkUpdateData: any = {
+      username: data.userName,
       firstName: data.firstName,
       lastName: data.lastName,
-    });
+    };
 
-    // Update parent in Prisma
+    if (data.password) {
+      clerkUpdateData.password = data.password;
+    }
+
+    await clerkClient.users.updateUser(data.id, clerkUpdateData);
+
     await prisma.parent.update({
       where: { id: data.id },
       data: {
         nationalId: data.nationalId,
         firstName: data.firstName,
         lastName: data.lastName,
-        userName:data.userName,
+        userName: data.userName,
         email: data.email,
         phone: data.phone,
         address: data.address,
@@ -112,7 +151,38 @@ export const updateParent = async (data: ParentSchema): Promise<ResponseState> =
   } catch (err: any) {
     console.error("Error in updateParent:", err);
 
-    // Rollback Prisma changes
+    // Handle Clerk-specific errors
+    if (err.clerkError) {
+      // Check if it's a password breach error
+      if (err.errors?.[0]?.code === 'form_password_pwned') {
+        return {
+          success: false,
+          error: true,
+          message: "Password has been found in an online data breach. Please use a different password."
+        };
+      }
+
+      // Handle username exists error
+      if (err.errors?.[0]?.code === 'form_identifier_exists') {
+        return {
+          success: false,
+          error: true,
+          message: "Username is already taken. Please choose another username."
+        };
+      }
+
+      // Handle any other Clerk errors by returning their specific messages
+      if (err.errors && err.errors.length > 0) {
+        return {
+          success: false,
+          error: true,
+          message: err.errors[0].message,
+          messages: err.errors.map((e: any) => e.message)
+        };
+      }
+    }
+
+    // Rollback Prisma changes if needed
     if (originalParent) {
       try {
         await prisma.parent.update({
@@ -120,7 +190,6 @@ export const updateParent = async (data: ParentSchema): Promise<ResponseState> =
           data: originalParent,
         });
 
-        // Rollback Clerk changes
         await clerkClient.users.updateUser(data.id, {
           username: originalParent.userName,
           firstName: originalParent.firstName,
@@ -131,20 +200,24 @@ export const updateParent = async (data: ParentSchema): Promise<ResponseState> =
       }
     }
 
-    // If Prisma or Clerk error has `errors`, return all error messages
-    if (err.errors) {
-      const errorMessages = err.errors.map((e: any) => e.message);
-      return { success: false, error: true, messages: errorMessages };
-    }
-
+    // Handle Prisma errors
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         const targetField = err.meta?.target;
-        return { success: false, error: true, message: `The ${targetField} is already in use. Please try another.` };
+        return {
+          success: false,
+          error: true,
+          message: `The ${targetField} is already in use. Please try another.`
+        };
       }
     }
 
-    return { success: false, error: true, message: err.message || "An error occurred during update." };
+    // Generic error fallback
+    return {
+      success: false,
+      error: true,
+      message: err.message || "An error occurred during update."
+    };
   }
 };
 

@@ -12,6 +12,7 @@ import SelectField from "../select-field";
 import Image from "next/image";
 import { CldUploadWidget } from "next-cloudinary";
 import MultiSelect from "../multi-select";
+import Switch from "../switch";
 
 type ResponseState = {
   success: boolean;
@@ -56,6 +57,7 @@ const StudentForm = ({
 
   const router = useRouter();
 
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [img, setImg] = useState<any>(data?.img);
   const [state, setState] = useState<ResponseState>({
     success: false,
@@ -144,31 +146,66 @@ const StudentForm = ({
             error={errors?.userName}
             placeholder="Enter user Name"
           />
-          {type === "create" && (
-            <>
+          {/* Password Fields Section */}
+      {type === "create" ? (
+        <div className="flex flex-wrap gap-4">
+          <InputField
+            label="Password"
+            name="password"
+            type="password"
+            register={register}
+            error={errors.password}
+            placeholder="Enter password"
+          />
+          <InputField
+            label="Repeat Password"
+            name="repeatPassword"
+            type="password"
+            register={register}
+            error={errors.repeatPassword}
+            placeholder="Enter password again"
+          />
+          {errors.repeatPassword && (
+            <p className="text-red-500 text-xs">
+              {errors.repeatPassword.message}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <Switch
+            label="Change Password"
+            checked={showPasswordFields}
+            onChange={setShowPasswordFields}
+          />
+
+          {showPasswordFields && (
+            <div className="flex flex-wrap gap-4">
               <InputField
-                label="Password"
+                label="New Password"
                 name="password"
                 type="password"
                 register={register}
                 error={errors.password}
-                placeholder="Enter password"
+                placeholder="Enter new password"
               />
               <InputField
-                label="Repeat Password"
+                label="Confirm New Password"
                 name="repeatPassword"
                 type="password"
                 register={register}
                 error={errors.repeatPassword}
-                placeholder="Enter password again"
+                placeholder="Confirm new password"
               />
               {errors.repeatPassword && (
                 <p className="text-red-500 text-xs">
                   {errors.repeatPassword.message}
                 </p>
               )}
-            </>
+            </div>
           )}
+        </div>
+      )}
         </div>
       </div>
 

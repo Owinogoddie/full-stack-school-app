@@ -72,7 +72,38 @@ export const createTeacher = async (
 
     // Rollback Clerk user creation if Prisma fails
     if (user) {
-      await clerkClient.users.deleteUser(user.id);
+      try {
+        await clerkClient.users.deleteUser(user.id);
+      } catch (rollbackErr) {
+        console.error("Error during rollback:", rollbackErr);
+      }
+    }
+     // Handle Clerk-specific errors
+     if (err.clerkError) {
+      if (err.errors?.[0]?.code === 'form_password_pwned') {
+        return {
+          success: false,
+          error: true,
+          message: "Password has been found in an online data breach. Please use a different password."
+        };
+      }
+
+      if (err.errors?.[0]?.code === 'form_identifier_exists') {
+        return {
+          success: false,
+          error: true,
+          message: "Username is already taken. Please choose another username."
+        };
+      }
+
+      if (err.errors && err.errors.length > 0) {
+        return {
+          success: false,
+          error: true,
+          message: err.errors[0].message,
+          messages: err.errors.map((e: any) => e.message)
+        };
+      }
     }
 
     // If Prisma or Clerk error has `errors`, return all error messages
@@ -112,7 +143,7 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
 
   let originalTeacher;
   try {
-    console.log("updating");
+    // console.log("updating");
     // Fetch original teacher data for potential rollback
     originalTeacher = await prisma.teacher.findUnique({
       where: { id: formData.id },
@@ -123,12 +154,20 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
       return { success: false, error: true, message: "Teacher not found." };
     }
 
-    // Update user in Clerk
-    await clerkClient.users.updateUser(formData.id, {
-      username:formData.userName,
+    // Prepare Clerk update data
+    const clerkUpdateData: any = {
+      username: formData.userName,
       firstName: formData.firstName,
       lastName: formData.lastName,
-    });
+    };
+
+    // Add password to Clerk update only if provided
+    if (formData.password) {
+      clerkUpdateData.password = formData.password;
+    }
+
+    // Update user in Clerk
+    await clerkClient.users.updateUser(formData.id, clerkUpdateData);
 
     // Update teacher in Prisma
     await prisma.teacher.update({
@@ -171,7 +210,36 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Error in updateTeacher: ", err);
+ // Handle Clerk-specific errors
+ if (err.clerkError) {
+  // Check if it's a password breach error
+  if (err.errors?.[0]?.code === 'form_password_pwned') {
+    return {
+      success: false,
+      error: true,
+      message: "Password has been found in an online data breach. Please use a different password."
+    };
+  }
 
+  // Handle username exists error
+  if (err.errors?.[0]?.code === 'form_identifier_exists') {
+    return {
+      success: false,
+      error: true,
+      message: "Username is already taken. Please choose another username."
+    };
+  }
+
+  // Handle any other Clerk errors by returning their specific messages
+  if (err.errors && err.errors.length > 0) {
+    return {
+      success: false,
+      error: true,
+      message: err.errors[0].message,
+      messages: err.errors.map((e: any) => e.message)
+    };
+  }
+}
     // Rollback Prisma changes
     if (originalTeacher) {
       try {
