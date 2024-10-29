@@ -86,10 +86,9 @@ export const updateParent = async (data: ParentSchema): Promise<ResponseState> =
       return { success: false, error: true, message: "Parent not found." };
     }
 
-    const username = `${data.firstName}${data.lastName}`.toLowerCase();
     // Update user in Clerk
     await clerkClient.users.updateUser(data.id, {
-      username,
+      username:data.userName,
       firstName: data.firstName,
       lastName: data.lastName,
     });
@@ -123,7 +122,7 @@ export const updateParent = async (data: ParentSchema): Promise<ResponseState> =
 
         // Rollback Clerk changes
         await clerkClient.users.updateUser(data.id, {
-          username: `${originalParent.firstName}${originalParent.lastName}`.toLowerCase(),
+          username: originalParent.userName,
           firstName: originalParent.firstName,
           lastName: originalParent.lastName,
         });

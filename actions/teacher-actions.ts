@@ -123,11 +123,9 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
       return { success: false, error: true, message: "Teacher not found." };
     }
 
-    const email = formData.email || ""; // Ensure email is not undefined
-    const username = email.split("@")[0]; // Take the part before the '@'
     // Update user in Clerk
     await clerkClient.users.updateUser(formData.id, {
-      username,
+      username:formData.userName,
       firstName: formData.firstName,
       lastName: formData.lastName,
     });
@@ -183,6 +181,7 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
             tscNumber: originalTeacher.tscNumber,
             firstName: originalTeacher.firstName,
             lastName: originalTeacher.lastName,
+            userName: originalTeacher.userName,
             dateOfBirth: originalTeacher.dateOfBirth,
             gender: originalTeacher.gender,
             nationalId: originalTeacher.nationalId,
@@ -209,7 +208,7 @@ export const updateTeacher = async (formData: any): Promise<ResponseState> => {
 
         // Rollback Clerk changes
         await clerkClient.users.updateUser(formData.id, {
-          username: originalTeacher.tscNumber,
+          username: originalTeacher.userName,
           firstName: originalTeacher.firstName,
           lastName: originalTeacher.lastName,
         });

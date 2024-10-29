@@ -128,10 +128,10 @@ export const updateStudent = async (
       return { success: false, error: true, message: "Student not found." };
     }
 
-    const username = `${data.firstName}${data.lastName}`.toLowerCase();
+   
     // Update user in Clerk
     await clerkClient.users.updateUser(data.id, {
-      username,
+      username:data.userName,
       firstName: data.firstName,
       lastName: data.lastName,
     });
@@ -213,7 +213,7 @@ export const updateStudent = async (
         });
         // Rollback Clerk changes
         await clerkClient.users.updateUser(data.id, {
-          username: `${originalStudent.firstName}${originalStudent.lastName}`.toLowerCase(),
+          username:originalStudent.userName,
           firstName: originalStudent.firstName,
           lastName: originalStudent.lastName,
         });
