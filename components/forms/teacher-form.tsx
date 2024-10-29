@@ -195,7 +195,7 @@ const TeacherForm = ({
             />
 
             {showPasswordFields && (
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-2">
                 <InputField
                   label="New Password"
                   name="password"

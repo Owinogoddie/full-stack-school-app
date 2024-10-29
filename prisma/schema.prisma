@@ -37,7 +37,7 @@ model School {
   departments   Department[]
   enrollments   Enrollment[]
   curricula     Curriculum[]
-
+  admissionNumberPattern AdmissionNumberPattern?
   feeTypes          FeeType[]
   specialProgrammes SpecialProgramme[]
 
@@ -50,7 +50,19 @@ model School {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
+model AdmissionNumberPattern {
+  id              Int      @id @default(autoincrement())
+  prefix          String   // e.g., "ADM"
+  yearFormat      String   // e.g., "YY" or "YYYY"
+  digitCount      Int      // e.g., 4 for "0001"
+  separator       String?  // Optional separator e.g., "/"
+  lastNumber      Int     // Last used number
+  school          School?   @relation(fields: [schoolId], references: [id])
+  schoolId        String?   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
+}
 model AcademicYear {
   id                  Int            @id @default(autoincrement())
   year                String

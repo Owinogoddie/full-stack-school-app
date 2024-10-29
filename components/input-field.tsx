@@ -9,6 +9,9 @@ type InputFieldProps = {
   name: string;
   defaultValue?: string;
   error?: FieldError;
+  readOnly?: boolean;
+
+  disabled?: boolean;
   hidden?: boolean;
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   placeholder?: string; // Optional placeholder
@@ -25,6 +28,8 @@ const InputField = ({
   error,
   hidden,
   inputProps,
+  disabled,
+  readOnly,
   placeholder,
   fullWidth = false, // Default to false
   textarea = false,   // Default to false
@@ -48,7 +53,7 @@ const InputField = ({
             {...register(name)}
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             defaultValue={defaultValue}
-            placeholder={placeholder} // Optional placeholder
+            placeholder={placeholder} 
             {...inputProps} // Spread additional props
           />
         ) : (
@@ -58,7 +63,9 @@ const InputField = ({
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full pr-10"
             {...inputProps}
             defaultValue={defaultValue}
-            placeholder={placeholder} // Optional placeholder
+            readOnly={readOnly}
+            disabled={disabled}
+            placeholder={placeholder} 
           />
         )}
         {type === "password" && (

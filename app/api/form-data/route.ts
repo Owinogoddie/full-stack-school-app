@@ -68,30 +68,58 @@ export async function GET(request: Request) {
         relatedData = { subjects: teacherSubjects, departments };
         break;
 
-      case "student":
-        const studentGrades = await prisma.grade.findMany({
-          select: { id: true, levelName: true }, // Updated field names
-        });
-        const clases = await prisma.class.findMany();
-        const academicYears = await prisma.academicYear.findMany();
-        const studentCategories = await prisma.studentCategory.findMany();
-        const studentParents = await prisma.parent.findMany({
-          // Updated variable name
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true, // Updated field names
-          },
-        });
-        relatedData = {
-          classes: clases,
-          grades: studentGrades,
-          parents: studentParents,
-          academicYears,
-          studentCategories,
-        };
-        break;
+        case "student":
+          const studentGrades = await prisma.grade.findMany({
+            select: { id: true, levelName: true },
+          });
+          
+          const clases = await prisma.class.findMany();
+          
+          const academicYears = await prisma.academicYear.findMany();
+          
+          const studentCategories = await prisma.studentCategory.findMany();
+          
+          const studentParents = await prisma.parent.findMany({
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          });
+        
+          // Fetch admission pattern
+          const admissionPattern = await prisma.admissionNumberPattern.findFirst();
 
+        
+          // Get the last student number
+          // const lastStudent = await prisma.student.findFirst({
+          //   // where: {
+          //   //   admissionNumber: {
+          //   //     not: null,
+          //   //   },
+          //   // },
+          //   orderBy: {
+          //     admissionNumber: 'desc',
+          //   },
+          // });
+        
+          // Combine pattern with last number
+          // const fullPattern = {
+          //   ...admissionPattern,
+          //   lastNumber: lastStudent ? 
+          //     parseInt(lastStudent.admissionNumber.match(/\d+$/)?.[0] || '0') : 
+          //     0,
+          // };
+        
+          relatedData = {
+            classes: clases,
+            grades: studentGrades,
+            parents: studentParents,
+            academicYears,
+            studentCategories,
+            admissionPattern: admissionPattern,
+          };
+          break;
       case "parent":
         const parentStudents = await prisma.student.findMany({
           select: { id: true, firstName: true, lastName: true }, // Updated field names
@@ -232,6 +260,9 @@ export async function GET(request: Request) {
 
       case "studentCategory":
         // No related data needed for student category
+        break;
+      case "admissionPattern":
+        // No related data needed for  admn patterns
         break;
 
       case "feeType":

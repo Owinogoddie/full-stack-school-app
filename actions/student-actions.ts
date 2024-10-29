@@ -4,8 +4,8 @@ import prisma from "@/lib/prisma";
 import { StudentSchema } from "@/schemas/student-schema";
 import { Prisma } from "@prisma/client";
 import { clerkClient } from "@clerk/nextjs/server";
-import { generateAdmissionNumber } from "@/lib/admissionNumber";
 import { getCurrentAcademicYear } from "@/lib/academic-year-util";
+import { generateNewAdmNumber } from "@/utils/generate-admission-number";
 
 type ResponseState = {
   success: boolean;
@@ -26,7 +26,7 @@ export const createStudent = async (
     };
   }
   try {
-    const admissionNumber = await generateAdmissionNumber();
+    // const admissionNumber = await generateAdmissionNumber();
     const currentAcademicYear = await getCurrentAcademicYear();
     // Create user in Clerk
     // const username = `${data.firstName}${data.lastName}`.toLowerCase();
@@ -40,11 +40,28 @@ export const createStudent = async (
 
     // Create student and enrollment in Prisma
     await prisma.$transaction(async (prisma) => {
+      // Get the admission pattern without schoolId filter
+      const admissionPattern = await prisma.admissionNumberPattern.findFirst();
+
+      if (!admissionPattern) {
+        throw new Error("No admission pattern found");
+      }
+      const { newLastNumber } = await generateNewAdmNumber({
+        prefix: admissionPattern.prefix,
+        yearFormat: admissionPattern.yearFormat,
+        digitCount: admissionPattern.digitCount,
+        // separator: admissionPattern.separator,
+        lastNumber: admissionPattern.lastNumber,
+      });
+      await prisma.admissionNumberPattern.update({
+        where: { id: admissionPattern.id },
+        data: { lastNumber: newLastNumber },
+      });
       const student = await prisma.student.create({
         data: {
           id: user.id,
           upi: data.upi,
-          admissionNumber,
+          admissionNumber:data.admissionNumber || "",
           firstName: data.firstName,
           userName: data.userName,
           lastName: data.lastName,

@@ -28,6 +28,7 @@ import { deleteStudentCategory } from "@/actions/student-category-actions";
 import { deleteTerm } from "@/actions/term-actions";
 import { deleteSpecialProgramme } from "@/actions/special-programme-actions";
 import { deleteFeeType } from "@/actions/fees/fee-types";
+import { deleteAdmissionPattern } from "@/actions/admission-pattern-actions";
 type ResponseState = {
   success: boolean;
   error: boolean;
@@ -62,6 +63,7 @@ const deleteActionMap: Record<string, DeleteAction> = {
   // feeException:deleteFeeException,
   // feeTransaction:deleteFeeTransaction,
   specialProgramme:deleteSpecialProgramme,
+  admissionPattern:deleteAdmissionPattern,
 
 };
 
@@ -145,6 +147,9 @@ const FeeExceptionForm = dynamic(() => import("./forms/fee-exception-form"), {
 const StudedntCategoryForm = dynamic(() => import("./forms/student-category-form"), {
   loading: () => <h1>Loading...</h1>,
 });
+const AdmissionPatternForm = dynamic(() => import("./forms/admission-pattern-form"), {
+  loading: () => <h1>Loading...</h1>,
+});
 
 
 const forms: {
@@ -161,6 +166,13 @@ const forms: {
       data={data}
       setOpen={setOpen}
       relatedData={relatedData}
+    />
+  ),
+  admissionPattern: (setOpen, type, data) => (
+    <AdmissionPatternForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
     />
   ),
   academicYear: (setOpen, type, data) => (

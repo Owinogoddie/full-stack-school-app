@@ -161,29 +161,36 @@ const ParentForm = ({
             fullWidth
           />
           {type === "create" ? (
-            <div className="flex flex-wrap gap-4">
-              <InputField
-                label="Password"
-                name="password"
-                type="password"
-                register={register}
-                error={errors.password}
-                placeholder="Enter password"
-              />
-              <InputField
-                label="Repeat Password"
-                name="repeatPassword"
-                type="password"
-                register={register}
-                error={errors.repeatPassword}
-                placeholder="Enter password again"
-              />
+            <>
+              <div className="flex flex-wrap gap-4">
+                <InputField
+                  label="Password"
+                  name="password"
+                  type="password"
+                  register={register}
+                  error={errors.password}
+                  placeholder="Enter password"
+                />
+                <InputField
+                  label="Repeat Password"
+                  name="repeatPassword"
+                  type="password"
+                  register={register}
+                  error={errors.repeatPassword}
+                  placeholder="Enter password again"
+                />
+                {errors.repeatPassword && (
+                  <p className="text-red-500 text-xs">
+                    {errors.repeatPassword.message}
+                  </p>
+                )}
+              </div>
               {errors.repeatPassword && (
                 <p className="text-red-500 text-xs">
                   {errors.repeatPassword.message}
                 </p>
               )}
-            </div>
+            </>
           ) : (
             <div className="space-y-4">
               <Switch
@@ -193,31 +200,31 @@ const ParentForm = ({
               />
 
               {showPasswordFields && (
-                <div className="flex flex-wrap gap-4">
-                  <InputField
-                    label="New Password"
-                    name="password"
-                    type="password"
-                    register={register}
-                    error={errors.password}
-                    placeholder="Enter new password"
-                    fullWidth
-                  />
-                  <InputField
-                    label="Confirm New Password"
-                    name="repeatPassword"
-                    type="password"
-                    register={register}
-                    error={errors.repeatPassword}
-                    placeholder="Confirm new password"
-                    fullWidth
-                  />
+                <>
+                  <div className="flex flex-wrap gap-4 md:items-center md:justify-between">
+                    <InputField
+                      label="New Password"
+                      name="password"
+                      type="password"
+                      register={register}
+                      error={errors.password}
+                      placeholder="Enter new password"
+                    />
+                    <InputField
+                      label="Confirm New Password"
+                      name="repeatPassword"
+                      type="password"
+                      register={register}
+                      error={errors.repeatPassword}
+                      placeholder="Confirm new password"
+                    />
+                  </div>
                   {errors.repeatPassword && (
                     <p className="text-red-500 text-xs">
                       {errors.repeatPassword.message}
                     </p>
                   )}
-                </div>
+                </>
               )}
             </div>
           )}

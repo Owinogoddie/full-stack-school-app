@@ -16,6 +16,12 @@ export const  menuItems = [
         },
         {
           icon: "/calendar.png",
+          label: "Adm Pattern",
+          href: "/list/admission-pattern",
+          visible: ["admin"],
+        },
+        {
+          icon: "/calendar.png",
           label: "Terms",
           href: "/list/terms",
           visible: ["admin"],

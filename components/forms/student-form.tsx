@@ -13,12 +13,27 @@ import Image from "next/image";
 import { CldUploadWidget } from "next-cloudinary";
 import MultiSelect from "../multi-select";
 import Switch from "../switch";
+import { generateNewAdmNumber } from "@/utils/generate-admission-number";
+
+type ClassItem = {
+  id: number;
+  name: string;
+  gradeId: number;
+};
 
 type ResponseState = {
   success: boolean;
   error: boolean;
   message?: string;
   messages?: string[];
+};
+
+type AdmissionPattern = {
+  prefix: string;
+  yearFormat: string;
+  digitCount: number;
+  separator: string;
+  lastNumber: number;
 };
 
 const StudentForm = ({
@@ -55,8 +70,11 @@ const StudentForm = ({
     },
   });
 
+  const [filteredClasses, setFilteredClasses] = useState<ClassItem[]>(relatedData.classes || []);
+  const [currentAdmissionNumber, setCurrentAdmissionNumber] = useState<string>(
+    data?.admissionNumber || ""
+  );
   const router = useRouter();
-
   const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [img, setImg] = useState<any>(data?.img);
   const [state, setState] = useState<ResponseState>({
@@ -64,8 +82,44 @@ const StudentForm = ({
     error: false,
   });
 
+  const [admissionPattern, setAdmissionPattern] = useState<AdmissionPattern>({
+    prefix: "",
+    yearFormat: "",
+    digitCount: 0,
+    separator: "",
+    lastNumber: 0,
+  });
+
   const password = watch("password");
   const repeatPassword = watch("repeatPassword");
+
+  useEffect(() => {
+    if (relatedData && relatedData.admissionPattern) {
+      setAdmissionPattern({
+        prefix: relatedData.admissionPattern.prefix,
+        yearFormat: relatedData.admissionPattern.yearFormat,
+        digitCount: relatedData.admissionPattern.digitCount,
+        separator: relatedData.admissionPattern.separator || "",
+        lastNumber: relatedData.admissionPattern.lastNumber,
+      });
+    }
+  }, [relatedData]);
+
+  useEffect(() => {
+    if (type === "create" && admissionPattern.prefix && admissionPattern.yearFormat && admissionPattern.digitCount) {
+      const { admissionNumber } = generateNewAdmNumber({
+        prefix: admissionPattern.prefix,
+        yearFormat: admissionPattern.yearFormat,
+        digitCount: admissionPattern.digitCount,
+        separator: admissionPattern.separator,
+        lastNumber: admissionPattern.lastNumber,
+      });
+
+      console.log('Generated admission number:', admissionNumber);
+      setCurrentAdmissionNumber(admissionNumber);
+      setValue("admissionNumber", admissionNumber);
+    }
+  }, [type, admissionPattern, setValue]);
 
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
@@ -94,10 +148,24 @@ const StudentForm = ({
 
     let responseState: ResponseState;
     if (type === "create") {
+      const { admissionNumber } = generateNewAdmNumber({
+        prefix: admissionPattern.prefix,
+        yearFormat: admissionPattern.yearFormat,
+        digitCount: admissionPattern.digitCount,
+        separator: admissionPattern.separator || "",
+        lastNumber: admissionPattern.lastNumber + 1,
+      });
+
       responseState = await createStudent({
         ...formData,
         img: img?.secure_url || img,
+        admissionNumber,
       });
+
+      setAdmissionPattern((prevPattern) => ({
+        ...prevPattern,
+        lastNumber: prevPattern.lastNumber + 1,
+      }));
     } else {
       const convertedData = {
         ...formData,
@@ -125,8 +193,26 @@ const StudentForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  const { parents, grades, classes,studentCategories  } = relatedData;
-// console.log(studentCategories)
+  const { parents, grades, studentCategories } = relatedData;
+
+  useEffect(() => {
+    const subscription = watch((values, { name }) => {
+      if (name === 'gradeId' && values.gradeId) {
+        const gradeId = Number(values.gradeId);
+        const classesForGrade = relatedData.classes.filter(
+          (classItem:any) => classItem.gradeId === gradeId
+        );
+        setFilteredClasses(classesForGrade);
+
+        const currentClassId = values.classId ? Number(values.classId) : null;
+        if (currentClassId && !classesForGrade.find((c:any) => c.id === currentClassId)) {
+          setValue("classId", undefined);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [watch, setValue, relatedData.classes]);
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
@@ -145,10 +231,13 @@ const StudentForm = ({
             register={register}
             error={errors?.userName}
             placeholder="Enter user Name"
+            fullWidth
           />
+      </div>
+
           {/* Password Fields Section */}
       {type === "create" ? (
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 mt-2">
           <InputField
             label="Password"
             name="password"
@@ -180,7 +269,7 @@ const StudentForm = ({
           />
 
           {showPasswordFields && (
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4 mt-2">
               <InputField
                 label="New Password"
                 name="password"
@@ -207,12 +296,21 @@ const StudentForm = ({
         </div>
       )}
         </div>
-      </div>
 
       {/* Personal Information */}
       <div>
         <span className="text-xs text-gray-400 font-medium">Personal Information</span>
         <div className="flex flex-wrap gap-4 mt-2">
+        <InputField
+            label="Admission Number"
+            name="admissionNumber"
+            register={register}
+            error={errors?.admissionNumber}
+            defaultValue={data?.admissionNumber || currentAdmissionNumber}
+            // readOnly
+            disabled={type === "update"}
+            // className="bg-gray-50" // To indicate it's read-only
+          />
         <InputField
             label="UPI"
             name="upi"
@@ -265,6 +363,7 @@ const StudentForm = ({
             register={register}
             error={errors.address}
             placeholder="Enter Address"
+            fullWidth
           />
         </div>
       </div>
@@ -274,7 +373,7 @@ const StudentForm = ({
         <span className="text-xs text-gray-400 font-medium">Parent Information</span>
         <div className="flex flex-wrap gap-4 mt-2">
           <SelectField
-            label="Parent"
+            label="Parent/Guardian"
             options={parents.map((parent: any) => ({
               value: parent.id,
               label: `${parent.firstName} ${parent.lastName}`,
@@ -304,18 +403,19 @@ const StudentForm = ({
             error={errors.gradeId}
             defaultValue={data?.gradeId}
           />
-          <SelectField
-            label="Class"
-            options={classes.map((classItem: any) => ({
-              value: classItem.id,
-              label: classItem.name,
-            }))}
-            name="classId"
-            register={register}
-            setValue={setValue}
-            error={errors.classId}
-            defaultValue={data?.classId}
-          />
+         <SelectField
+  label="Class"
+  options={filteredClasses.map((classItem:any) => ({
+    value: classItem.id.toString(),
+    label: classItem.name,
+  }))}
+  name="classId"
+  register={register}
+  setValue={setValue}
+  error={errors.classId}
+  defaultValue={data?.classId}
+  disabled={!watch("gradeId")}
+/>
           <InputField
             label="Enrollment Date"
             name="enrollmentDate"
@@ -323,6 +423,7 @@ const StudentForm = ({
             defaultValue={data?.enrollmentDate?.toISOString().split("T")[0]}
             register={register}
             error={errors.enrollmentDate}
+            fullWidth
           />
         </div>
       </div>
